@@ -22,7 +22,8 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
-  body{background:linear-gradient(180deg,#0e1320,#0f1420 40%);color:var(--ink);
+  html{background:#0f1420}
+  body{background:#0f1420;background-image:linear-gradient(180deg,#0e1320,#0f1420 40%);background-attachment:fixed;min-height:100vh;color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     line-height:1.45;padding-bottom:calc(80px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased;}
   .wrap{max-width:640px;margin:0 auto;padding:0 16px}
@@ -856,6 +857,9 @@ function renderReport(){
 
 /* ============ HISTORY (month → week → day → detail) ============ */
 let histNav={level:"months"};
+let histMode="month";      // "day" | "week" | "month"
+let histDay=null;          // selected ISO date for Day mode
+let histDetailDate=null;   // opened day inside 7-day mode
 const STAND_LABELS={s_space:"Respected space",s_anger:"Didn't act while angry",s_window:"Stayed in processing window",s_ate:"Ate enough",s_hydrate:"Hydrated",s_trained:"Trained / recovered",s_work:"Completed work",s_tool:"Used a regulation tool",s_self:"Did something for myself",s_connect:"Connected with support"};
 const REFL=[["hardest","Hardest moment"],["trigger","Biggest trigger"],["handled","Handled well"],["helped","What helped"],["proud","Proud of"],["improve","Improve tomorrow"],["letgo","Letting go"]];
 function allDates(){const s=new Set();Object.keys(DB.morning).forEach(d=>s.add(d));Object.keys(DB.nightly).forEach(d=>s.add(d));DB.events.forEach(e=>s.add(e.date));DB.activities.forEach(a=>s.add(a.date));Object.keys(DB.goals).forEach(d=>s.add(d));return[...s].filter(Boolean).sort();}
@@ -868,12 +872,28 @@ function shortD(iso){return parseISO(iso).toLocaleDateString(undefined,{month:"s
 function kv(label,val,u){if(val==null||val==="")return "";return '<div class="listrow"><span class="tag">'+esc(label)+'</span><span>'+esc(val)+(u||"")+'</span></div>';}
 function sumStats(dates){return{score:avg(dates.map(dayScore)),rec:avg(dates.map(d=>morningVal(d,"recovery_pct"))),sleep:avg(dates.map(d=>morningVal(d,"hours_slept"))),anx:avg(dates.map(d=>nightVal(d,"avg_anx"))),events:dates.reduce((s,d)=>s+eventsOn(d).length,0),gym:dates.reduce((s,d)=>s+gymDay(d),0)};}
 function dayBadges(d){const p=[];const r=morningVal(d,"recovery_pct");if(r!=null)p.push("rec "+r+"%");const s=morningVal(d,"hours_slept");if(s!=null)p.push(s+"h sleep");const e=eventsOn(d).length;if(e)p.push(e+" event"+(e>1?"s":""));const a=actsOn(d).length;if(a)p.push(a+" activit"+(a>1?"ies":"y"));if(gymDay(d))p.push("gym");const g=DB.goals[d];if(g)p.push(DAILY_GOALS.filter(x=>g[x.k]).length+"/6 goals");return p.join(" · ")||"logged";}
+function histBackBtn(fn){const b=el("button","btn ghost sm","‹ Back");b.style.width="auto";b.style.marginBottom="12px";b.onclick=fn;return b;}
+function latestLoggedOr(fallback){const d=allDates();return d.length?d[d.length-1]:fallback;}
+function dayCard(wrap,d,onclick){const sc=dayScore(d);const c=el("div","entrycard");c.style.cursor="pointer";
+  c.innerHTML='<div class="top"><span class="ttl">'+parseISO(d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})+'</span><span class="time">'+(sc!=null?"score "+sc:"")+'</span></div><div class="meta">'+dayBadges(d)+'</div>';
+  c.onclick=onclick;wrap.appendChild(c);}
 function renderHistory(){
   const wrap=$("#historyWrap");wrap.innerHTML="";
+  // view-mode selector
+  const sel=el("div","seg");sel.style.marginBottom="14px";
+  [["day","Day"],["week","7 days"],["month","Month"]].forEach(([m,lab])=>{
+    const b=el("button",null,lab);b.type="button";if(histMode===m)b.classList.add("on");
+    b.onclick=()=>{histMode=m;histNav={level:"months"};histDetailDate=null;if(m==="day"&&!histDay)histDay=latestLoggedOr(CUR);renderHistory();};
+    sel.appendChild(b);});
+  wrap.appendChild(sel);
   const dates=allDates();
-  if(!dates.length){wrap.innerHTML='<p class="empty-state">No history yet — every day you log will show up here, newest first.</p>';return;}
-  if(histNav.level!=="months"){const back=el("button","btn ghost sm","‹ Back");back.style.width="auto";back.style.marginBottom="12px";
-    back.onclick=()=>{histNav.level=histNav.level==="day"?"days":histNav.level==="days"?"weeks":"months";renderHistory();};wrap.appendChild(back);}
+  if(!dates.length){wrap.appendChild(el("p","empty-state","No history yet — every day you log will show up here."));return;}
+  if(histMode==="month")renderMonthMode(wrap,dates);
+  else if(histMode==="week")renderWeekMode(wrap,dates);
+  else renderDayMode(wrap,dates);
+}
+function renderMonthMode(wrap,dates){
+  if(histNav.level!=="months")wrap.appendChild(histBackBtn(()=>{histNav.level=histNav.level==="day"?"days":histNav.level==="days"?"weeks":"months";renderHistory();}));
   if(histNav.level==="months"){
     wrap.appendChild(el("h2",null,"By month"));
     [...new Set(dates.map(monthKey))].sort().reverse().forEach(mk=>{const md=dates.filter(d=>monthKey(d)===mk),st=sumStats(md);
@@ -889,11 +909,29 @@ function renderHistory(){
       c.onclick=()=>{histNav={level:"days",week:wk};renderHistory();};wrap.appendChild(c);});
   } else if(histNav.level==="days"){
     wrap.appendChild(el("h2",null,"Week of "+shortD(histNav.week)));
-    dates.filter(d=>mondayOf(d)===histNav.week).sort().reverse().forEach(d=>{const sc=dayScore(d);
-      const c=el("div","entrycard");c.style.cursor="pointer";
-      c.innerHTML='<div class="top"><span class="ttl">'+parseISO(d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})+'</span><span class="time">'+(sc!=null?"score "+sc:"")+'</span></div><div class="meta">'+dayBadges(d)+'</div>';
-      c.onclick=()=>{histNav={level:"day",day:d};renderHistory();};wrap.appendChild(c);});
+    dates.filter(d=>mondayOf(d)===histNav.week).sort().reverse().forEach(d=>dayCard(wrap,d,()=>{histNav={level:"day",day:d};renderHistory();}));
   } else if(histNav.level==="day"){ renderDayDetail(wrap,histNav.day); }
+}
+function renderWeekMode(wrap,dates){
+  if(histDetailDate){wrap.appendChild(histBackBtn(()=>{histDetailDate=null;renderHistory();}));renderDayDetail(wrap,histDetailDate);return;}
+  wrap.appendChild(el("h2",null,"Last 7 days"));
+  const last7=[];for(let i=0;i<7;i++)last7.push(addDays(CUR,-i));
+  const logged=last7.filter(anyDataOn),st=sumStats(logged);
+  wrap.appendChild(el("p","mini",logged.length?("avg score "+fmtA(st.score)+" · recovery "+fmtA(st.rec,"%")+" · "+st.events+" events · "+st.gym+" gym days"):"No entries in the last 7 days yet."));
+  last7.forEach(d=>{
+    if(anyDataOn(d))dayCard(wrap,d,()=>{histDetailDate=d;renderHistory();});
+    else{const c=el("div","entrycard");c.style.opacity=".5";c.innerHTML='<div class="top"><span class="ttl">'+parseISO(d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})+'</span><span class="time">no entry</span></div>';wrap.appendChild(c);}
+  });
+}
+function renderDayMode(wrap,dates){
+  const d=histDay||CUR;
+  const row=el("div");row.style.cssText="display:flex;gap:8px;align-items:center;margin-bottom:12px";
+  const prev=el("button","btn ghost sm","‹");prev.style.width="auto";prev.onclick=()=>{histDay=addDays(d,-1);renderHistory();};
+  const inp=el("input");inp.type="date";inp.value=d;inp.max=CUR;inp.style.flex="1";inp.onchange=()=>{if(inp.value){histDay=inp.value;renderHistory();}};
+  const next=el("button","btn ghost sm","›");next.style.width="auto";if(d>=CUR){next.disabled=true;next.style.opacity=".4";}else next.onclick=()=>{histDay=addDays(d,1);renderHistory();};
+  row.appendChild(prev);row.appendChild(inp);row.appendChild(next);wrap.appendChild(row);
+  if(anyDataOn(d))renderDayDetail(wrap,d);
+  else wrap.appendChild(el("p","empty-state","Nothing logged on "+parseISO(d).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})+"."));
 }
 function renderDayDetail(wrap,d){
   wrap.appendChild(el("h2",null,parseISO(d).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"})));
