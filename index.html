@@ -1087,7 +1087,14 @@ function renderSettings(){$("#set_start").value=DB.settings.startDate;$("#set_wp
   if($("#fbConfig")&&!$("#fbConfig").value)$("#fbConfig").value=JSON.stringify(DB.settings.fbConfig||(typeof BAKED_FB_CONFIG!=="undefined"?BAKED_FB_CONFIG:""),null,2);
   if(cloud.user)cloudStatus("Signed in as "+(cloud.user.email||"you")+" · synced.");}
 $("#saveSettings").onclick=()=>{DB.settings.startDate=$("#set_start").value||todayISO();DB.settings.wp1=$("#set_wp1").value.trim();DB.settings.wp2=$("#set_wp2").value.trim();DB.settings.dad=$("#set_dad").value.trim();save();flash("Setup saved ✓");renderHeader();renderDash();};
-$("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify(DB,null,2)],{type:"application/json"});const a=el("a");a.href=URL.createObjectURL(blob);a.download="recovery-backup-"+CUR+".json";a.click();flash("Backup downloaded");};
+async function saveFile(filename,text,mime){
+  const blob=new Blob([text],{type:mime});
+  try{const file=new File([blob],filename,{type:mime});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:filename});flash("Choose where to save it");return;}
+  }catch(e){if(e&&e.name==="AbortError")return;}
+  const a=el("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();flash("Backup saved");
+}
+$("#exportBtn").onclick=()=>saveFile("recovery-backup-"+CUR+".json",JSON.stringify(DB,null,2),"application/json");
 $("#importBtn").onclick=()=>$("#importFile").click();
 $("#importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.settings&&!d.morning)throw 0;DB=d;DB.settings=DB.settings||{};DB.morning=DB.morning||{};DB.nightly=DB.nightly||{};DB.events=DB.events||[];DB.activities=DB.activities||[];DB.goals=DB.goals||{};if(!DB.settings.startDate)DB.settings.startDate=todayISO();save();renderAll();flash("Backup imported ✓");}catch(x){flash("Couldn't read that file")}};r.readAsText(f);};
 function csv(rows){return rows.map(r=>r.map(v=>{if(Array.isArray(v))v=v.join("|");if(v==null)v="";v=String(v).replace(/"/g,'""');return /[",\n]/.test(v)?'"'+v+'"':v;}).join(",")).join("\n");}
@@ -1095,10 +1102,10 @@ $("#csvDaily").onclick=()=>{const mk=Object.keys(MORNING_SCHEMA.filter(f=>f.key)
   const cols=["date"].concat(mk.map(k=>"m_"+k),nk.map(k=>"n_"+k),["day_success"]);
   const dates=Object.keys(DB.morning).concat(Object.keys(DB.nightly)).filter((v,i,s)=>s.indexOf(v)===i).sort();
   const rows=[cols];dates.forEach(d=>{const m=DB.morning[d]||{},n=DB.nightly[d]||{};rows.push([d].concat(mk.map(k=>m[k]),nk.map(k=>n[k]),[n.success]));});
-  const blob=new Blob([csv(rows)],{type:"text/csv"});const a=el("a");a.href=URL.createObjectURL(blob);a.download="daily-"+CUR+".csv";a.click();flash("Daily CSV downloaded");};
+  saveFile("daily-"+CUR+".csv",csv(rows),"text/csv");};
 $("#csvEvents").onclick=()=>{const cols=["date","time","event_type","trigger","location","anxiety","panic","anger","urge_contact","urge_impulsive","contacted_val","contact_nature","duration_min","anxiety_after","urge_after","self_control","to_standards","what_happened","thoughts","helped_most","do_differently"];
   const rows=[cols];DB.events.slice().sort((a,b)=>a.ts<b.ts?-1:1).forEach(e=>rows.push(cols.map(c=>c==="time"?new Date(e.ts).toLocaleTimeString():e[c])));
-  const blob=new Blob([csv(rows)],{type:"text/csv"});const a=el("a");a.href=URL.createObjectURL(blob);a.download="events-"+CUR+".csv";a.click();flash("Events CSV downloaded");};
+  saveFile("events-"+CUR+".csv",csv(rows),"text/csv");};
 
 /* ============ NAV ============ */
 $$("nav.tab button").forEach(btn=>btn.onclick=()=>{
