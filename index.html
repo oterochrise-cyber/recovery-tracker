@@ -887,7 +887,8 @@ const HIST_METRICS=[
 function progressChart(metric){
   const dates=allDates();
   const pts=dates.map(d=>({d,v:metric.get(d)})).filter(p=>p.v!=null);
-  if(pts.length<2)return '<p class="mini">Log at least two days to see your '+esc(metric.label.toLowerCase())+' trend here.</p>';
+  if(pts.length===0)return '<p class="mini" style="padding:10px 0">No '+esc(metric.label.toLowerCase())+' logged yet — it will appear here as you log.</p>';
+  if(pts.length===1)return '<p class="mini" style="padding:10px 0">📈 Just one day logged so far — your '+esc(metric.label.toLowerCase())+' line draws itself once you have a second day.</p>';
   const x0=parseISO(pts[0].d).getTime(),x1=Math.max(parseISO(CUR).getTime(),parseISO(pts[pts.length-1].d).getTime()),span=Math.max(1,x1-x0);
   let ymin=metric.min,ymax=metric.max;const vals=pts.map(p=>p.v);
   if(ymin==null||ymax==null){ymin=Math.min(...vals);ymax=Math.max(...vals);const pad=(ymax-ymin)*0.2||1;ymin-=pad;ymax+=pad;}
@@ -917,6 +918,10 @@ function renderHistory(){
   const wrap=$("#historyWrap");wrap.innerHTML="";
   // progress-over-time graph
   {const pcard=el("div","card");pcard.innerHTML='<h2>Progress over time</h2>';
+    const _ad=allDates();
+    const counts=HIST_METRICS.map(m=>({k:m.k,n:_ad.filter(d=>m.get(d)!=null).length}));
+    const cur=counts.find(c=>c.k===histMetric);
+    if(!cur||cur.n<2){const best=counts.slice().sort((a,b)=>b.n-a.n)[0];if(best&&best.n>=2)histMetric=best.k;}
     const mp=el("div","chipwrap");mp.style.margin="0 0 12px";
     HIST_METRICS.forEach(m=>{const b=el("button","chip",m.label);b.type="button";if(histMetric===m.k)b.classList.add("on");b.onclick=()=>{histMetric=m.k;renderHistory();};mp.appendChild(b);});
     pcard.appendChild(mp);
