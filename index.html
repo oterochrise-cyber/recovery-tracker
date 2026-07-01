@@ -860,6 +860,7 @@ let histNav={level:"months"};
 let histMode="month";      // "day" | "week" | "month"
 let histDay=null;          // selected ISO date for Day mode
 let histDetailDate=null;   // opened day inside 7-day mode
+let histMetric="success";  // progress-graph metric
 const STAND_LABELS={s_space:"Respected space",s_anger:"Didn't act while angry",s_window:"Stayed in processing window",s_ate:"Ate enough",s_hydrate:"Hydrated",s_trained:"Trained / recovered",s_work:"Completed work",s_tool:"Used a regulation tool",s_self:"Did something for myself",s_connect:"Connected with support"};
 const REFL=[["hardest","Hardest moment"],["trigger","Biggest trigger"],["handled","Handled well"],["helped","What helped"],["proud","Proud of"],["improve","Improve tomorrow"],["letgo","Letting go"]];
 function allDates(){const s=new Set();Object.keys(DB.morning).forEach(d=>s.add(d));Object.keys(DB.nightly).forEach(d=>s.add(d));DB.events.forEach(e=>s.add(e.date));DB.activities.forEach(a=>s.add(a.date));Object.keys(DB.goals).forEach(d=>s.add(d));return[...s].filter(Boolean).sort();}
@@ -877,8 +878,50 @@ function latestLoggedOr(fallback){const d=allDates();return d.length?d[d.length-
 function dayCard(wrap,d,onclick){const sc=dayScore(d);const c=el("div","entrycard");c.style.cursor="pointer";
   c.innerHTML='<div class="top"><span class="ttl">'+parseISO(d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})+'</span><span class="time">'+(sc!=null?"score "+sc:"")+'</span></div><div class="meta">'+dayBadges(d)+'</div>';
   c.onclick=onclick;wrap.appendChild(c);}
+const HIST_METRICS=[
+  {k:"success",label:"Day score",get:d=>dayScore(d),min:0,max:100,good:"up",color:"var(--accent2)"},
+  {k:"recovery",label:"Recovery",get:d=>morningVal(d,"recovery_pct"),min:0,max:100,good:"up",color:"var(--good)"},
+  {k:"hrv",label:"HRV",get:d=>morningVal(d,"hrv"),min:null,max:null,good:"up",color:"#8ad6c2"},
+  {k:"anxiety",label:"Anxiety",get:d=>nightVal(d,"avg_anx"),min:0,max:10,good:"down",color:"#b3a0e6"}
+];
+function progressChart(metric){
+  const dates=allDates();
+  const pts=dates.map(d=>({d,v:metric.get(d)})).filter(p=>p.v!=null);
+  if(pts.length<2)return '<p class="mini">Log at least two days to see your '+esc(metric.label.toLowerCase())+' trend here.</p>';
+  const x0=parseISO(pts[0].d).getTime(),x1=Math.max(parseISO(CUR).getTime(),parseISO(pts[pts.length-1].d).getTime()),span=Math.max(1,x1-x0);
+  let ymin=metric.min,ymax=metric.max;const vals=pts.map(p=>p.v);
+  if(ymin==null||ymax==null){ymin=Math.min(...vals);ymax=Math.max(...vals);const pad=(ymax-ymin)*0.2||1;ymin-=pad;ymax+=pad;}
+  const W=340,H=132,PL=6,PR=6,PT=12,PB=18;
+  const sx=t=>PL+((t-x0)/span)*(W-PL-PR),sy=v=>PT+(1-(v-ymin)/((ymax-ymin)||1))*(H-PT-PB);
+  const co=pts.map(p=>[+sx(parseISO(p.d).getTime()).toFixed(1),+sy(p.v).toFixed(1)]);
+  const line=co.map((c,i)=>(i?'L':'M')+c[0]+' '+c[1]).join(' ');
+  const area=line+' L'+co[co.length-1][0]+' '+(H-PB)+' L'+co[0][0]+' '+(H-PB)+' Z';
+  let sX=0,sY=0,sXY=0,sXX=0;const n=pts.length;
+  pts.forEach(p=>{const xi=parseISO(p.d).getTime();sX+=xi;sY+=p.v;sXY+=xi*p.v;sXX+=xi*xi;});
+  const slope=(n*sXY-sX*sY)/((n*sXX-sX*sX)||1),icpt=(sY-slope*sX)/n;
+  const ty0=sy(icpt+slope*x0),ty1=sy(icpt+slope*x1);
+  const totalChange=slope*span,rangeRef=(ymax-ymin)||1,signif=Math.abs(totalChange)>rangeRef*0.05;
+  let status,tcol;
+  if(!signif){status='holding →';tcol='var(--muted2)';}
+  else{const good=metric.good==="up"?totalChange>0:totalChange<0;status=good?'improving ↗':'watch ↘';tcol=good?'var(--good)':'var(--bad)';}
+  const dots=co.map(c=>'<circle cx="'+c[0]+'" cy="'+c[1]+'" r="2.3" fill="'+metric.color+'"/>').join('');
+  const gid='pg_'+metric.k;
+  const svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block;overflow:visible">'+
+    '<defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+metric.color+'" stop-opacity="0.25"/><stop offset="1" stop-color="'+metric.color+'" stop-opacity="0"/></linearGradient></defs>'+
+    '<path d="'+area+'" fill="url(#'+gid+')"/>'+
+    '<line x1="'+PL+'" y1="'+ty0.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+ty1.toFixed(1)+'" stroke="'+tcol+'" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.85"/>'+
+    '<path d="'+line+'" fill="none" stroke="'+metric.color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+dots+'</svg>';
+  return svg+'<div style="display:flex;justify-content:space-between;margin-top:4px" class="mini"><span>'+shortD(pts[0].d)+'</span><span style="color:'+tcol+';font-weight:600">'+status+'</span><span>'+shortD(pts[pts.length-1].d)+'</span></div>';
+}
 function renderHistory(){
   const wrap=$("#historyWrap");wrap.innerHTML="";
+  // progress-over-time graph
+  {const pcard=el("div","card");pcard.innerHTML='<h2>Progress over time</h2>';
+    const mp=el("div","chipwrap");mp.style.margin="0 0 12px";
+    HIST_METRICS.forEach(m=>{const b=el("button","chip",m.label);b.type="button";if(histMetric===m.k)b.classList.add("on");b.onclick=()=>{histMetric=m.k;renderHistory();};mp.appendChild(b);});
+    pcard.appendChild(mp);
+    const g=el("div");g.innerHTML=progressChart(HIST_METRICS.find(m=>m.k===histMetric)||HIST_METRICS[0]);pcard.appendChild(g);
+    wrap.appendChild(pcard);}
   // view-mode selector
   const sel=el("div","seg");sel.style.marginBottom="14px";
   [["day","Day"],["week","7 days"],["month","Month"]].forEach(([m,lab])=>{
