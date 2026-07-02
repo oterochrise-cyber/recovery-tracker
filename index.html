@@ -7,28 +7,28 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Recovery">
-<meta name="theme-color" content="#0f1420">
+<meta name="theme-color" content="#06080d">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <title>Recovery Tracker</title>
 <link rel="manifest" href="manifest.webmanifest">
 <style>
   :root{
-    --bg:#0f1420; --bg2:#161d2e; --card:#1b2438; --card2:#212c44;
-    --line:#2b3752; --ink:#eef2fb; --muted:#93a0bd; --muted2:#6b7794;
-    --accent:#6ea8ff; --accent2:#8ad6c2; --good:#63c69a; --warn:#e6b566; --bad:#e08a8a; --purple:#b3a0e6;
-    --calm1:#1d2b46; --calm2:#24405f;
-    --radius:16px; --tap:44px; font-size:16px;
+    --bg:#06080d; --bg2:#0d121b; --card:#111725; --card2:#182031;
+    --line:#232c40; --ink:#f5f8ff; --muted:#8fa0bf; --muted2:#5f6c85;
+    --accent:#3ea6ff; --accent2:#45e0c0; --good:#2ee6a8; --warn:#ffd166; --bad:#ff5c7a; --purple:#b3a0e6;
+    --calm1:#122036; --calm2:#173252;
+    --radius:20px; --tap:44px; font-size:16px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
-  html{background:#0f1420}
-  body{background:#0f1420;background-image:linear-gradient(180deg,#0e1320,#0f1420 40%);background-attachment:fixed;min-height:100vh;color:var(--ink);
+  html{background:#06080d}
+  body{background:#06080d;background-image:linear-gradient(180deg,#04060a,#06080d 40%);background-attachment:fixed;min-height:100vh;color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    line-height:1.45;padding-bottom:calc(80px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased;}
+    line-height:1.45;padding-bottom:calc(104px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased;}
   .wrap{max-width:640px;margin:0 auto;padding:0 16px}
   header.app{position:sticky;top:0;z-index:20;padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;
-    background:linear-gradient(180deg,rgba(15,20,32,.96),rgba(15,20,32,.86));backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
+    background:linear-gradient(180deg,rgba(6,8,13,.97),rgba(6,8,13,.88));backdrop-filter:blur(14px);border-bottom:1px solid var(--line);}
   header.app .row{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:640px;margin:0 auto}
   header.app h1{font-size:1.05rem;margin:0;font-weight:650;letter-spacing:.2px}
   header.app .sub{font-size:.72rem;color:var(--muted);margin-top:2px}
@@ -42,10 +42,16 @@
   .view.active{display:block}
   @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
-  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
-  .card h2{font-size:.98rem;margin:0 0 4px;font-weight:650}
+  .card{background:linear-gradient(180deg,#141b2b,#0e1420);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:0 10px 26px rgba(0,0,0,.38)}
+  .card h2{font-size:.76rem;margin:0 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted)}
+  .ringrow{display:flex;justify-content:space-between;gap:8px;margin:8px 0 16px}
+  .ringbox{flex:1;text-align:center;min-width:0}
+  .ringwrap{position:relative;width:88px;height:88px;margin:0 auto}
+  .ringwrap .rv{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.22rem;letter-spacing:-.5px}
+  .ringbox .rl{font-size:.62rem;letter-spacing:1.3px;text-transform:uppercase;color:var(--muted);margin-top:7px;font-weight:700}
   .card .hint,p.hint{font-size:.78rem;color:var(--muted);margin:0 0 12px}
-  .banner{background:linear-gradient(160deg,var(--calm2),var(--calm1));border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px}
+  .banner{position:relative;background:linear-gradient(160deg,#12243c,#0c1626);border:none;border-radius:var(--radius);padding:15px 17px;margin-bottom:14px;box-shadow:0 10px 26px rgba(0,0,0,.38)}
+  .banner::before{content:"";position:absolute;inset:0;border-radius:var(--radius);padding:1.5px;background:linear-gradient(120deg,#ff8a5c,#b06ef7 45%,#3ea6ff);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.75}
   .banner .big{font-size:.95rem;font-weight:600}
   .banner .small{font-size:.8rem;color:#cdd8ef;margin-top:3px}
 
@@ -98,7 +104,7 @@
   .btn.running{background:var(--accent2)!important;color:#08201a!important;border-color:var(--accent2)!important;font-weight:700}
   .btnrow{display:flex;gap:10px}.btnrow .btn{flex:1}
 
-  .saved-flash{position:fixed;left:50%;bottom:calc(94px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--good);color:#08201a;padding:11px 18px;border-radius:999px;font-weight:650;font-size:.85rem;opacity:0;pointer-events:none;transition:.25s;z-index:60;max-width:90%;text-align:center}
+  .saved-flash{position:fixed;left:50%;bottom:calc(112px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--good);color:#08201a;padding:11px 18px;border-radius:999px;font-weight:650;font-size:.85rem;opacity:0;pointer-events:none;transition:.25s;z-index:60;max-width:90%;text-align:center}
   .saved-flash.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
 
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
@@ -107,7 +113,7 @@
   .grid3 .stat{padding:12px 10px;text-align:center}
   .stat .big{font-size:1.7rem;font-weight:720;line-height:1.1}
   .grid3 .stat .big{font-size:1.35rem}
-  .stat .cap{font-size:.7rem;color:var(--muted);margin-top:4px}
+  .stat .cap{font-size:.62rem;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:1.1px;font-weight:700}
   .stat .sub{font-size:.68rem;color:var(--muted2);margin-top:2px}
   .bars{display:flex;align-items:flex-end;gap:4px;height:60px;margin-top:6px}
   .bars .b{flex:1;background:var(--accent);border-radius:4px 4px 2px 2px;min-height:3px;opacity:.9}
@@ -170,7 +176,7 @@
   .empty-state{text-align:center;color:var(--muted);padding:24px 10px;font-size:.88rem}
   .foot{color:var(--muted2);font-size:.72rem;text-align:center;padding:8px 0 4px}
   .arrow-up{color:var(--good)}.arrow-dn{color:var(--bad)}.arrow-flat{color:var(--muted)}
-  nav.tab{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(17,23,37,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+  nav.tab{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 10px);z-index:40;background:rgba(14,19,30,.94);backdrop-filter:blur(18px);border:1px solid #26314a;border-radius:28px;box-shadow:0 14px 34px rgba(0,0,0,.6);padding:2px 4px}
   nav.tab .row{display:flex;max-width:640px;margin:0 auto}
   nav.tab button{flex:1;background:none;border:none;color:var(--muted2);padding:9px 4px 8px;font-family:inherit;font-size:.6rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;transition:color .15s ease}
   nav.tab button:active{transform:scale(.92)}
@@ -309,7 +315,7 @@
   <section class="view" id="view-dash">
     <div class="seg" id="dashToggle" style="margin-bottom:14px"><button data-m="overview" class="on">Overview</button><button data-m="history">History</button></div>
     <div id="overviewWrap">
-    <div class="card"><h2>Today</h2><div class="grid3" id="todayStats" style="margin-bottom:0"></div></div>
+    <div class="card"><h2>Today</h2><div class="ringrow" id="heroRings"></div><div class="grid3" id="todayStats" style="margin-bottom:0"></div></div>
     <div class="card"><h2>The six weeks</h2><p class="hint">Every square is a day. Tap one to open it.</p><div id="pixelCal"></div>
       <div class="legend" style="margin-top:10px"><span><i style="background:var(--good)"></i>strong</span><span><i style="background:var(--warn)"></i>mixed</span><span><i style="background:#7a5b6e"></i>rough</span><span><i style="background:#3a4a6e"></i>logged</span><span><i style="background:transparent;border:1px dashed var(--muted2)"></i>ahead</span></div>
       <div id="milestoneRow" style="margin-top:14px"></div></div>
@@ -804,16 +810,20 @@ function renderDash(){
   // today stats
   const ts=$("#todayStats");ts.innerHTML="";
   const m=DB.morning[CUR]||{},n=DB.nightly[CUR]||{};
+  const hr=$("#heroRings");
+  if(hr){
+    const rec=blank(m.recovery_pct),slp=blank(m.hours_slept),scr=n.success!=null?n.success:null;
+    hr.innerHTML=heroRing(rec!=null?rec+"%":"—",rec!=null?rec/100:0,rec!=null?recColor(rec):"#3a4356","Recovery")+
+      heroRing(slp!=null?slp+"h":"—",slp!=null?Math.min(1,slp/9):0,slp!=null?"#3ea6ff":"#3a4356","Sleep")+
+      heroRing(scr!=null?String(scr):"—",scr!=null?scr/100:0,scr!=null?"#45e0c0":"#3a4356","Day score");
+  }
   const cards=[
-    {b:m.recovery_pct!=null&&m.recovery_pct!==""?m.recovery_pct+"%":"—",c:"Recovery",col:m.recovery_pct!==""&&m.recovery_pct!=null?recColor(+m.recovery_pct):null},
-    {b:m.hours_slept?m.hours_slept+"h":"—",c:"Sleep"},
     {b:blank(m.m_anxiety)!=null?m.m_anxiety:"—",c:"AM anxiety"},
     {b:blank(m.m_stress)!=null?m.m_stress:"—",c:"AM stress"},
     {b:blank(m.m_urge)!=null?m.m_urge:"—",c:"Urge to contact"},
     {b:selfControlAvg(CUR)!=null?selfControlAvg(CUR).toFixed(1)+"/2":"—",c:"Self-control"},
     {b:goalDone(CUR)+"/6",c:"Goals done"},
-    {b:blank(n.work_prod)!=null?n.work_prod:"—",c:"Work"},
-    {b:n.success!=null?n.success:"—",c:"Day score"}
+    {b:blank(n.work_prod)!=null?n.work_prod:"—",c:"Work"}
   ];
   cards.forEach(c=>{const d=el("div","stat");d.innerHTML='<div class="big"'+(c.col?' style="color:'+c.col+'"':'')+'>'+c.b+'</div><div class="cap">'+c.c+'</div>';ts.appendChild(d);});
   renderPixelCal();renderWins();renderWeeklyScore();renderTrends();renderCorrelations();renderReport();
@@ -920,6 +930,16 @@ function renderReport(){
   if(top(trigCount))rows.push('<p><b>Biggest trigger:</b> '+esc(top(trigCount))+'</p>');
   if(top(toolCount))rows.push('<p><b>Coping that worked best:</b> '+esc(top(toolCount))+' (most common in controlled events)</p>');
   $("#weeklyReport").innerHTML=rows.length?rows.join(""):'<p class="empty-state">Your first weekly report appears once you have a few days logged.</p>';
+}
+
+/* ============ HERO RINGS (WHOOP-style) ============ */
+function heroRing(valText,pct,color,label){
+  const R=38,C=2*Math.PI*R,off=C*(1-Math.max(0,Math.min(1,pct)));
+  return '<div class="ringbox"><div class="ringwrap"><svg width="88" height="88" viewBox="0 0 88 88">'+
+    '<circle cx="44" cy="44" r="38" fill="none" stroke="#1b2334" stroke-width="7"/>'+
+    '<circle cx="44" cy="44" r="38" fill="none" stroke="'+color+'" stroke-width="7" stroke-linecap="round" stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 44 44)" style="transition:stroke-dashoffset .8s ease"/></svg>'+
+    '<div class="rv" style="color:'+(pct>0?color:"var(--muted2)")+'">'+valText+'</div></div>'+
+    '<div class="rl">'+label+'</div></div>';
 }
 
 /* ============ SIX-WEEK PIXELS, MILESTONES, WINS ============ */
