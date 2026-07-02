@@ -92,7 +92,10 @@
   .btn.ghost{background:var(--card2);color:var(--ink);border:1px solid var(--line)}
   .btn.calm{background:linear-gradient(135deg,#3a5a8f,#2a6f61);color:#fff}
   .btn.sm{padding:10px 12px;font-size:.85rem;border-radius:12px}
-  .btn:active{transform:scale(.99);opacity:.92}
+  .btn,.chip,.seg button{transition:transform .08s ease,filter .15s ease,background .15s ease}
+  .btn:active{transform:scale(.95);filter:brightness(1.35)}
+  .chip:active,.seg button:active,.goalrow:active,.del:active{transform:scale(.93);filter:brightness(1.4)}
+  .btn.running{background:var(--accent2)!important;color:#08201a!important;border-color:var(--accent2)!important;font-weight:700}
   .btnrow{display:flex;gap:10px}.btnrow .btn{flex:1}
 
   .saved-flash{position:fixed;left:50%;bottom:calc(94px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--good);color:#08201a;padding:11px 18px;border-radius:999px;font-weight:650;font-size:.85rem;opacity:0;pointer-events:none;transition:.25s;z-index:60;max-width:90%;text-align:center}
@@ -169,7 +172,13 @@
   .arrow-up{color:var(--good)}.arrow-dn{color:var(--bad)}.arrow-flat{color:var(--muted)}
   nav.tab{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(17,23,37,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
   nav.tab .row{display:flex;max-width:640px;margin:0 auto}
-  nav.tab button{flex:1;background:none;border:none;color:var(--muted2);padding:9px 4px 8px;font-family:inherit;font-size:.6rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+  nav.tab button{flex:1;background:none;border:none;color:var(--muted2);padding:9px 4px 8px;font-family:inherit;font-size:.6rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;transition:color .15s ease}
+  nav.tab button:active{transform:scale(.92)}
+  nav.tab button::before{content:"";position:absolute;top:5px;left:50%;transform:translateX(-50%) scaleX(.4);width:48px;height:30px;border-radius:999px;background:transparent;transition:background .18s ease,transform .18s ease;z-index:0}
+  nav.tab button.on::before{background:rgba(110,168,255,.18);transform:translateX(-50%) scaleX(1)}
+  nav.tab button.ev.on::before{background:rgba(138,214,194,.18)}
+  nav.tab button .ic{position:relative;z-index:1}
+  nav.tab button.on{font-weight:700}
   nav.tab button .ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   nav.tab button.on{color:var(--accent)}
   nav.tab button.ev.on,nav.tab button.ev{color:var(--accent2)}
@@ -192,6 +201,7 @@
     <div class="card">
       <h2 id="morningHeading">Morning check-in</h2>
       <p class="hint">Capture the last 24 hours. This is data collection, not a verdict.</p>
+      <label class="field"><span class="lab">Logging for <small>missed a day? Go back and fill it in</small></span><input type="date" id="morningDate"></label>
       <div class="section-label">WHOOP <small>type it in, or attach a screenshot for your records</small></div>
       <div class="btnrow" style="margin-bottom:14px">
         <button class="btn ghost sm" id="attachShot">📷 Attach WHOOP screenshot</button>
@@ -219,7 +229,7 @@
         <a class="btn ghost sm" id="callDadBtn" href="tel:" style="text-decoration:none;text-align:center;line-height:1.2">Call Dad</a>
         <a class="btn ghost sm" id="notesBtn" href="#" style="text-decoration:none;text-align:center;line-height:1.2">Draft in Notes</a>
       </div>
-      <button class="btn ghost sm" id="urgeWaveBtn" style="margin-top:12px">🌊 Ride it out — 90 seconds</button>
+      <button class="btn ghost sm" id="urgeWaveBtn" style="margin-top:12px">🌊 Let it pass — 90 seconds</button>
       <div id="waveBox" style="display:none;margin-top:12px">
         <svg viewBox="0 0 340 96" width="100%"><path id="wavePath" d="" fill="none" stroke="var(--accent2)" stroke-width="2" opacity="0.8"/><circle id="waveDot" r="5" fill="#eef2fb"/></svg>
         <div style="text-align:center;font-size:.92rem;color:#dff3ec;min-height:1.4em" id="waveMsg"></div>
@@ -284,6 +294,7 @@
     <div class="card">
       <h2 id="nightHeading">Nightly review</h2>
       <p class="hint">Close the day honestly. You're scored on how you acted, not how you felt.</p>
+      <label class="field"><span class="lab">Logging for <small>missed a night? Go back and fill it in</small></span><input type="date" id="nightDate"></label>
       <div id="nightForm"></div>
       <div class="callout" style="text-align:center">
         <div style="font-size:.72rem;color:var(--muted)">Today's success score</div>
@@ -407,6 +418,7 @@ function phaseFor(w){return w<=2?"Stabilize":w<=4?"Build evidence":"Evaluate"}
 function dow(iso){return parseISO(iso).toLocaleDateString(undefined,{weekday:"narrow"})}
 function nowHM(){const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
 const CUR=todayISO();
+let LOGDATE=CUR; // the day Morning/Night entries write to — lets you backfill missed days
 
 /* ---------- misc helpers ---------- */
 function num(x){return x===""||x==null?0:Number(x)}
@@ -436,8 +448,9 @@ function renderField(f,obj){
     inp.oninput=()=>{obj[f.key]=+inp.value;vn.textContent=inp.value;paintRange(inp);};
     wrap.appendChild(inp);paintRange(inp);return wrap;
   }
-  if(f.type==="num"||f.type==="text"||f.type==="time"){
+  if(f.type==="num"||f.type==="text"||f.type==="time"||f.type==="date"){
     mk("");const inp=el("input");inp.type=f.type==="num"?"number":f.type;
+    if(f.type==="date")inp.max=CUR;
     if(f.type==="num"){inp.inputMode=f.step&&f.step<1?"decimal":"numeric";if(f.min!=null)inp.min=f.min;if(f.max!=null)inp.max=f.max;if(f.step)inp.step=f.step;}
     if(f.placeholder)inp.placeholder=f.placeholder;
     if(f.list){inp.setAttribute("list",f.key+"_dl");const dl=el("datalist");dl.id=f.key+"_dl";f.list.forEach(o=>dl.appendChild(el("option",null,esc(o))));wrap.appendChild(dl);}
@@ -528,31 +541,37 @@ const MORNING_SCHEMA=[
   {type:"text",key:"intention",label:"What is my main goal for today?",list:INTENTIONS,placeholder:"e.g. Stay calm at work"}
 ];
 function renderMorning(){
-  morningObj=Object.assign({},DB.morning[CUR]||{});
+  const dp=$("#morningDate");
+  if(dp){dp.value=LOGDATE;dp.max=CUR;dp.onchange=()=>{if(dp.value){LOGDATE=dp.value>CUR?CUR:dp.value;renderMorning();}};}
+  $("#morningHeading").textContent=(LOGDATE===CUR?"Morning · ":"Backfill · ")+parseISO(LOGDATE).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
+  morningObj=Object.assign({},DB.morning[LOGDATE]||{});
   buildForm($("#morningForm"),MORNING_SCHEMA,morningObj);
   renderShot();
-  $("#morningSaved").textContent=DB.morning[CUR]?"Saved earlier — this updates it.":"Not saved yet today.";
+  $("#morningSaved").textContent=DB.morning[LOGDATE]?"Saved earlier — this updates it.":(LOGDATE===CUR?"Not saved yet today.":"Nothing logged for this day yet.");
 }
-$("#saveMorning").onclick=()=>{morningObj._u=Date.now();DB.morning[CUR]=morningObj;save();flash("Morning saved ✓");$("#morningSaved").textContent="Saved just now.";renderDash();renderStreaks();};
+$("#saveMorning").onclick=()=>{morningObj._u=Date.now();DB.morning[LOGDATE]=morningObj;save();flash("Morning saved ✓ · "+shortD(LOGDATE));$("#morningSaved").textContent="Saved just now.";renderDash();renderStreaks();};
 /* screenshot attach */
 function shotKey(d){return "shot:"+d}
-function renderShot(){const p=$("#shotPreview");const data=localStorage.getItem(shotKey(CUR));
-  if(data){p.innerHTML='<img class="thumb" src="'+data+'"><button class="btn ghost sm" id="rmShot" style="margin:8px 0 6px">Remove screenshot</button>';$("#rmShot").onclick=()=>{localStorage.removeItem(shotKey(CUR));renderShot();};}
+function renderShot(){const p=$("#shotPreview");const data=localStorage.getItem(shotKey(LOGDATE));
+  if(data){p.innerHTML='<img class="thumb" src="'+data+'"><button class="btn ghost sm" id="rmShot" style="margin:8px 0 6px">Remove screenshot</button>';$("#rmShot").onclick=()=>{localStorage.removeItem(shotKey(LOGDATE));renderShot();};}
   else p.innerHTML="";}
 $("#attachShot").onclick=()=>$("#shotFile").click();
 $("#shotFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{const img=new Image();img.onload=()=>{const mx=820,sc=Math.min(1,mx/Math.max(img.width,img.height));
     const c=el("canvas");c.width=img.width*sc;c.height=img.height*sc;c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-    try{localStorage.setItem(shotKey(CUR),c.toDataURL("image/jpeg",0.6));renderShot();flash("Screenshot saved");}catch(x){flash("Image too large to store")}};img.src=r.result;};
+    try{localStorage.setItem(shotKey(LOGDATE),c.toDataURL("image/jpeg",0.6));renderShot();flash("Screenshot saved");}catch(x){flash("Image too large to store")}};img.src=r.result;};
   r.readAsDataURL(f);};
 
 /* ============ EVENT LOGGER ============ */
 let evTimerLeft=1800,evInt=null,eventObj=null;
 function evFmt(s){return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")}
-$("#evTimerStart").onclick=()=>{if(evInt)return;evInt=setInterval(()=>{evTimerLeft--;$("#evTimer").textContent=evFmt(evTimerLeft);if(evTimerLeft<=0){clearInterval(evInt);evInt=null;$("#evTimer").textContent="You made it.";}},1000)};
-$("#evTimerReset").onclick=()=>{clearInterval(evInt);evInt=null;evTimerLeft=1800;$("#evTimer").textContent="30:00";};
+$("#evTimerStart").onclick=()=>{if(evInt)return;const b=$("#evTimerStart");b.classList.add("running");b.textContent="Pause running…";
+  evInt=setInterval(()=>{evTimerLeft--;$("#evTimer").textContent=evFmt(evTimerLeft);if(evTimerLeft<=0){clearInterval(evInt);evInt=null;b.classList.remove("running");b.textContent="Start 30-min pause";$("#evTimer").textContent="You made it.";}},1000)};
+$("#evTimerReset").onclick=()=>{clearInterval(evInt);evInt=null;evTimerLeft=1800;$("#evTimer").textContent="30:00";const b=$("#evTimerStart");b.classList.remove("running");b.textContent="Start 30-min pause";};
 $("#notesBtn").onclick=e=>{e.preventDefault();try{location.href="mobilenotes://";}catch(x){}setTimeout(()=>flash("Draft it in Notes — not to her."),200)};
 const EVENT_SCHEMA=[
+  {type:"date",key:"log_date",label:"Date",unit:"backfill an earlier day if needed"},
+  {type:"time",key:"log_time",label:"Time"},
   {type:"chips",key:"event_type",label:"Event type",options:EVENT_TYPES},
   {type:"chips",key:"trigger",label:"Trigger",options:TRIGGERS},
   {type:"chips",key:"location",label:"Location",options:LOCATIONS},
@@ -574,10 +593,12 @@ const EVENT_SCHEMA=[
   {type:"textarea",key:"helped_most",label:"What helped the most?"},
   {type:"textarea",key:"do_differently",label:"What would I do differently next time?"}
 ];
-$("#openEventForm").onclick=()=>{eventObj={};$("#evNow").textContent="Now · "+nowHM();buildForm($("#eventForm"),EVENT_SCHEMA,eventObj);$("#eventFormCard").style.display="";$("#eventFormCard").scrollIntoView({behavior:"smooth"});};
+$("#openEventForm").onclick=()=>{eventObj={log_date:CUR,log_time:nowHM()};$("#evNow").textContent="Now · "+nowHM();buildForm($("#eventForm"),EVENT_SCHEMA,eventObj);$("#eventFormCard").style.display="";$("#eventFormCard").scrollIntoView({behavior:"smooth"});};
 $("#cancelEvent").onclick=()=>{$("#eventFormCard").style.display="none";eventObj=null;};
 $("#saveEvent").onclick=()=>{
-  const ev=Object.assign({id:Date.now(),ts:new Date().toISOString(),date:CUR},eventObj);
+  const d=(eventObj.log_date&&eventObj.log_date<=CUR)?eventObj.log_date:CUR;
+  const tm=eventObj.log_time||nowHM();
+  const ev=Object.assign({id:Date.now()},eventObj,{ts:d+"T"+tm+":00",date:d});
   DB.events.push(ev);save();
   $("#eventFormCard").style.display="none";eventObj=null;
   flash(eventMsg(ev));renderEventList();renderDash();renderStreaks();
@@ -612,6 +633,7 @@ function renderEventList(){
 /* ============ ACTIVITY / SELF-CARE ============ */
 let actObj=null;
 function actSchema(){return[
+  {type:"date",key:"log_date",label:"Date",unit:"backfill an earlier day if needed"},
   {type:"chips",key:"category",label:"Category",options:Object.keys(ACT_CATS)},
   {type:"chips",key:"activity",label:"Activity",options:actObj&&actObj.category?ACT_CATS[actObj.category]:ACT_CATS.Physical},
   {type:"time",key:"time",label:"Time"},
@@ -621,7 +643,7 @@ function actSchema(){return[
   {type:"bool",key:"felt_normal",label:"Did this help me feel more normal?"},
   {type:"textarea",key:"notes",label:"Notes"}
 ];}
-$("#openActForm").onclick=()=>{actObj={time:nowHM()};$("#actFormCard").style.display="";rebuildActForm();$("#actFormCard").scrollIntoView({behavior:"smooth"});};
+$("#openActForm").onclick=()=>{actObj={log_date:CUR,time:nowHM()};$("#actFormCard").style.display="";rebuildActForm();$("#actFormCard").scrollIntoView({behavior:"smooth"});};
 function rebuildActForm(){
   buildForm($("#activityForm"),actSchema(),actObj);
   // re-render activity chips when category changes
@@ -630,7 +652,8 @@ function rebuildActForm(){
 }
 $("#cancelAct").onclick=()=>{$("#actFormCard").style.display="none";actObj=null;};
 $("#saveAct").onclick=()=>{if(!actObj.category){flash("Pick a category");return;}
-  DB.activities.push(Object.assign({id:Date.now(),date:CUR},actObj));save();
+  const ad=(actObj.log_date&&actObj.log_date<=CUR)?actObj.log_date:CUR;
+  DB.activities.push(Object.assign({id:Date.now()},actObj,{date:ad}));save();
   $("#actFormCard").style.display="none";actObj=null;flash("Activity logged ✓");renderActList();autoGoalsFromActivities();renderGoals();renderStreaks();renderDash();};
 function actsOn(d){return DB.activities.filter(a=>a.date===d).sort((a,b)=>(a.time||"")<(b.time||"")?-1:1)}
 function renderActList(){
@@ -723,14 +746,17 @@ const NIGHT_SCHEMA=[
 ];
 const STAND_KEYS=["s_space","s_anger","s_window","s_ate","s_hydrate","s_trained","s_work","s_tool","s_self","s_connect"];
 function renderNight(){
-  nightObj=Object.assign({},DB.nightly[CUR]||{});
+  const dp=$("#nightDate");
+  if(dp){dp.value=LOGDATE;dp.max=CUR;dp.onchange=()=>{if(dp.value){LOGDATE=dp.value>CUR?CUR:dp.value;renderNight();}};}
+  $("#nightHeading").textContent=(LOGDATE===CUR?"Nightly review · ":"Backfill · ")+parseISO(LOGDATE).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
+  nightObj=Object.assign({},DB.nightly[LOGDATE]||{});
   // prefill behavior counts from events (only if not already saved)
   buildForm($("#nightForm"),NIGHT_SCHEMA,nightObj);
   // live score updates: attach input listener on the whole form
   $("#nightForm").addEventListener("input",updateNightScore);
   $("#nightForm").addEventListener("click",()=>setTimeout(updateNightScore,0));
   updateNightScore();
-  $("#nightSaved").textContent=DB.nightly[CUR]?"Saved earlier — this updates it.":"Not saved yet tonight.";
+  $("#nightSaved").textContent=DB.nightly[LOGDATE]?"Saved earlier — this updates it.":(LOGDATE===CUR?"Not saved yet tonight.":"Nothing logged for this night yet.");
 }
 function successScore(n,date){
   const triVal=v=>v==="Yes"?2:v==="Partially"?1:0;
@@ -748,14 +774,14 @@ function successScore(n,date){
   return Math.max(0,Math.min(100,Math.round(s)));
 }
 function updateNightScore(){
-  const s=successScore(nightObj,CUR);
+  const s=successScore(nightObj,LOGDATE);
   $("#nightScore").textContent=s;
   $("#nightScore").style.color=s>=70?"var(--good)":s>=45?"var(--warn)":"var(--muted)";
   const hardFelt=num(nightObj.peak_anx)>=7||num(nightObj.peak_sad)>=7||num(nightObj.peak_urge)>=7;
   $("#nightVerdict").textContent=hardFelt&&s>=65?"Hard day, handled well — this is exactly what progress looks like."
     :s>=70?"Strong day of self-respecting action.":s>=45?"Solid effort. The trend is what counts, not one day.":"Rough day. It's one data point, not the direction. Reset tomorrow.";
 }
-$("#saveNight").onclick=()=>{nightObj.success=successScore(nightObj,CUR);nightObj._u=Date.now();DB.nightly[CUR]=nightObj;save();flash("Night saved ✓");$("#nightSaved").textContent="Saved just now.";renderDash();renderStreaks();};
+$("#saveNight").onclick=()=>{nightObj.success=successScore(nightObj,LOGDATE);nightObj._u=Date.now();DB.nightly[LOGDATE]=nightObj;save();flash("Night saved ✓ · "+shortD(LOGDATE));$("#nightSaved").textContent="Saved just now.";renderDash();renderStreaks();};
 
 /* ============ DASHBOARD ============ */
 function drawBars(barsId,xId,series,opts){opts=opts||{};
@@ -990,17 +1016,18 @@ let waveInt=null;
 function wavePos(t){const W=340,H=96,A=64,mu=45,sg=18;const x=Math.min(t,90)/90*W,y=H-10-A*Math.exp(-Math.pow(Math.min(t,90)-mu,2)/(2*sg*sg));
   const dot=$("#waveDot");dot.setAttribute("cx",x.toFixed(1));dot.setAttribute("cy",y.toFixed(1));}
 $("#urgeWaveBtn").onclick=()=>{
+  $("#urgeWaveBtn").classList.add("running");
   $("#waveBox").style.display="";clearInterval(waveInt);let t=0;wavePos(0);
   $("#waveMsg").textContent="An urge is a wave. It rises, peaks, and always falls.";$("#waveTimer").textContent="1:30";
   waveInt=setInterval(()=>{t++;wavePos(t);
     $("#waveMsg").textContent=t<30?"It's rising. You don't have to do anything about it.":t<55?"This is the peak. It cannot stay here.":t<90?"It's already passing. Ride it down.":"It passed — and you didn't act. That's the rep.";
     const left=Math.max(0,90-t);$("#waveTimer").textContent=t>=90?"✓":Math.floor(left/60)+":"+String(left%60).padStart(2,"0");
-    if(t>=90){clearInterval(waveInt);waveInt=null;}
+    if(t>=90){clearInterval(waveInt);waveInt=null;$("#urgeWaveBtn").classList.remove("running");}
   },1000);
 };
 
 /* ============ QUICK-LOG PRESETS ============ */
-function openEventWith(pre){eventObj=Object.assign({},pre);$("#evNow").textContent="Now · "+nowHM();buildForm($("#eventForm"),EVENT_SCHEMA,eventObj);$("#eventFormCard").style.display="";$("#eventFormCard").scrollIntoView({behavior:"smooth"});}
+function openEventWith(pre){eventObj=Object.assign({log_date:CUR,log_time:nowHM()},pre);$("#evNow").textContent="Now · "+nowHM();buildForm($("#eventForm"),EVENT_SCHEMA,eventObj);$("#eventFormCard").style.display="";$("#eventFormCard").scrollIntoView({behavior:"smooth"});}
 $("#qp1").onclick=()=>openEventWith({event_type:"Anxiety",trigger:"Saw her",location:"Office"});
 $("#qp2").onclick=()=>openEventWith({event_type:"Urge to contact her",trigger:"Being alone"});
 $("#qp3").onclick=()=>openEventWith({event_type:"Anger"});
@@ -1284,6 +1311,7 @@ $("#rangeSel").onchange=renderTrends;
 /* ============ INIT ============ */
 function renderAll(){renderHeader();renderMorning();renderEventList();renderGoals();renderActList();renderStreaks();renderReasons();renderDash();}
 renderHeader();renderMorning();renderReasons();renderDash();runBreath();
+document.addEventListener("touchstart",function(){},{passive:true}); // enables :active press states on iOS
 if(DB.settings.fbConfig)cloudInit(DB.settings.fbConfig);
 else if(typeof BAKED_FB_CONFIG!=="undefined"&&BAKED_FB_CONFIG.apiKey)cloudInit(BAKED_FB_CONFIG);
 
