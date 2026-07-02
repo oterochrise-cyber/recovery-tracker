@@ -435,10 +435,10 @@ function renderField(f,obj){
 
 /* ============ OPTION LISTS ============ */
 const TRIGGERS=["Saw her","Spoke to her","Received a text","No response","Memory or flashback","Social media","Work pressure","Financial pressure","Poor sleep","Hunger","Stimulant or caffeine effect","Conflict","Feeling ignored","Being alone","Other"];
-const EVENT_TYPES=["Anxiety","Panic","Anger","Grief","Rejection","Loneliness","Urge to contact her","Work stress","Relationship trigger","Other"];
+const EVENT_TYPES=["Anxiety","Panic","Anger","Grief","Loneliness","Urge to contact her","Work stress","Other"];
 const LOCATIONS=["Office","Car","Home","Gym","Outside","Other"];
 const SYMPTOMS=["Racing heart","Chest tightness","Shaking","Sweating","Feeling frozen","Trouble breathing","Dizziness","Nausea","Feeling detached","Impending doom","Muscle tension","Other"];
-const ACTIONS=["Paused","Walked away","Called dad","Called friend","Contacted therapist","Used breathing","Used cold water","Ate food","Drank water","Went outside","Journaled","Used distraction","Went to gym","Took a shower","Contacted her","Sent a message","Did nothing","Other"];
+const ACTIONS=["Paused","Walked away","Called dad","Called friend","Contacted therapist","Used breathing","Used cold water","Ate food","Drank water","Went outside","Journaled","Used distraction","Went to gym","Took a shower","Did nothing","Other"];
 const ACT_CATS={Physical:["Gym","Cardio","Walk","Stretching","Recovery","Sauna","Meal preparation","Ate full meal","Hydration goal","Sleep routine"],
   Social:["Time with friends","Called dad","Called family","Went to dinner","Social event","Trusted person","Left the house"],
   Work:["Completed work target","Sales activity","Recruiting","Agent development","Follow-up","Administrative","Career planning"],
@@ -524,9 +524,8 @@ const EVENT_SCHEMA=[
   {type:"textarea",key:"what_happened",label:"What happened?",placeholder:"A sentence or two."},
   {type:"textarea",key:"thoughts",label:"What thoughts appeared?",placeholder:"e.g. She's gone forever · I need to reach out · I ruined everything"},
   {type:"section",label:"Intensity now",small:"0–10"},
-  {type:"slider",key:"anxiety",label:"Anxiety"},{type:"slider",key:"panic",label:"Panic"},{type:"slider",key:"anger",label:"Anger"},
-  {type:"slider",key:"sadness",label:"Sadness"},{type:"slider",key:"urge_contact",label:"Urge to contact her"},
-  {type:"slider",key:"urge_impulsive",label:"Urge to act impulsively"},{type:"slider",key:"physical",label:"Physical symptom intensity"},
+  {type:"slider",key:"anxiety",label:"Anxiety"},{type:"slider",key:"anger",label:"Anger"},
+  {type:"slider",key:"urge_contact",label:"Urge to contact her"},{type:"slider",key:"physical",label:"Physical symptom intensity"},
   {type:"chipsMulti",key:"symptoms",label:"Which physical symptoms?",options:SYMPTOMS},
   {type:"chipsMulti",key:"actions",label:"Action taken",options:ACTIONS},
   {type:"chips",key:"contacted_val",label:"Did I contact her?",options:["No","Yes, text","Yes, call","Yes, in person"]},
@@ -654,6 +653,10 @@ function renderStreaks(){const box=$("#streakGrid");if(!box)return;box.innerHTML
 let nightObj;
 const NIGHT_SCHEMA=[
   {type:"slider",key:"day_rating",label:"Overall day"},
+  {type:"section",label:"Positives",small:"0–10 · the good counts too"},
+  {type:"slider",key:"happiness",label:"Overall happiness"},
+  {type:"slider",key:"calm",label:"Calm / at peace"},
+  {type:"slider",key:"hope",label:"Hope for the future"},
   {type:"section",label:"Emotional",small:"0–10 · tracked, never penalized"},
   {type:"slider",key:"avg_anx",label:"Average anxiety"},{type:"slider",key:"peak_anx",label:"Peak anxiety"},
   {type:"slider",key:"avg_sad",label:"Average sadness"},{type:"slider",key:"peak_sad",label:"Peak sadness"},
@@ -882,7 +885,8 @@ const HIST_METRICS=[
   {k:"success",label:"Day score",get:d=>dayScore(d),min:0,max:100,good:"up",color:"var(--accent2)"},
   {k:"recovery",label:"Recovery",get:d=>morningVal(d,"recovery_pct"),min:0,max:100,good:"up",color:"var(--good)"},
   {k:"hrv",label:"HRV",get:d=>morningVal(d,"hrv"),min:null,max:null,good:"up",color:"#8ad6c2"},
-  {k:"anxiety",label:"Anxiety",get:d=>nightVal(d,"avg_anx"),min:0,max:10,good:"down",color:"#b3a0e6"}
+  {k:"anxiety",label:"Anxiety",get:d=>nightVal(d,"avg_anx"),min:0,max:10,good:"down",color:"#b3a0e6"},
+  {k:"happiness",label:"Happiness",get:d=>nightVal(d,"happiness"),min:0,max:10,good:"up",color:"#e6b566"}
 ];
 function progressChart(metric){
   const dates=allDates();
@@ -1009,7 +1013,7 @@ function renderDayDetail(wrap,d){
   const n=DB.nightly[d];
   if(n){const c=el("div","card");let h='<h2>Nightly review</h2>';
     if(n.success!=null)h+='<div class="callout" style="text-align:center"><div style="font-size:1.7rem;font-weight:720;color:'+(n.success>=70?"var(--good)":n.success>=45?"var(--warn)":"var(--muted)")+'">'+n.success+'</div><div class="mini">day success score</div></div>';
-    h+=kv("Day rating",n.day_rating)+kv("Avg anxiety",n.avg_anx)+kv("Peak anxiety",n.peak_anx)+kv("Peak sadness",n.peak_sad)+kv("Peak anger",n.peak_ang)+kv("Highest urge",n.peak_urge)+kv("Rumination",n.rumination_min," min")+kv("Time around her",n.time_val_min," min")+kv("Work productivity",n.work_prod);
+    h+=kv("Day rating",n.day_rating)+kv("Happiness",n.happiness)+kv("Calm",n.calm)+kv("Hope",n.hope)+kv("Avg anxiety",n.avg_anx)+kv("Peak anxiety",n.peak_anx)+kv("Peak sadness",n.peak_sad)+kv("Peak anger",n.peak_ang)+kv("Highest urge",n.peak_urge)+kv("Rumination",n.rumination_min," min")+kv("Time around her",n.time_val_min," min")+kv("Work productivity",n.work_prod);
     const st=Object.keys(STAND_LABELS).filter(k=>n[k]).map(k=>'<div class="listrow"><span>'+esc(STAND_LABELS[k])+'</span><span>'+esc(n[k])+'</span></div>').join("");
     if(st)h+='<div class="section-label" style="margin:16px 0 6px">Standards</div>'+st;
     const rf=REFL.filter(([k])=>n[k]).map(([k,l])=>'<div style="margin-top:8px"><div class="tag" style="font-size:.72rem">'+esc(l)+'</div><div style="font-size:.86rem">'+esc(n[k])+'</div></div>').join("");
