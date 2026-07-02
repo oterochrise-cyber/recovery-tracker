@@ -139,6 +139,12 @@
   .goalrow.done .goalbox{background:var(--good);border-color:var(--good)}
   .goalrow .gtext{font-size:.9rem}.goalrow.done .gtext{color:var(--muted);text-decoration:line-through}
 
+  .pixgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .pix{aspect-ratio:1;border-radius:7px;background:#26304a;cursor:pointer}
+  .pix.future{background:transparent;border:1.5px dashed #2b3752;cursor:default}
+  .pix.today{outline:2px solid var(--ink);outline-offset:1.5px}
+  .ms-chip{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;padding:6px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin:0 6px 6px 0;background:var(--bg2)}
+  .ms-chip.hit{background:rgba(99,198,154,.15);border-color:transparent;color:var(--good);font-weight:600}
   .streakgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .streak{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
   .streak .n{font-size:1.3rem;font-weight:720}.streak .l{font-size:.72rem;color:var(--muted)}
@@ -202,7 +208,8 @@
     <div class="card" id="eventIntroCard">
       <h2 style="text-align:center">Feeling a spike? Pause here first.</h2>
       <p class="hint" style="text-align:center">Strong feelings are allowed. The win is not acting on them.</p>
-      <div class="breath">Breathe in…<br>hold…<br>out…</div>
+      <div class="seg calm" id="breathSeg" style="margin-bottom:10px"><button data-p="calm" class="on">Calm</button><button data-p="box">Box 4·4·4·4</button><button data-p="478">4·7·8</button></div>
+      <div class="breath" id="breathCircle"><span id="breathLabel">Breathe in…</span></div>
       <div class="timer" id="evTimer">30:00</div>
       <div class="btnrow" style="margin:8px 0 14px">
         <button class="btn ghost sm" id="evTimerStart">Start 30-min pause</button>
@@ -212,8 +219,26 @@
         <a class="btn ghost sm" id="callDadBtn" href="tel:" style="text-decoration:none;text-align:center;line-height:1.2">Call Dad</a>
         <a class="btn ghost sm" id="notesBtn" href="#" style="text-decoration:none;text-align:center;line-height:1.2">Draft in Notes</a>
       </div>
+      <button class="btn ghost sm" id="urgeWaveBtn" style="margin-top:12px">🌊 Ride it out — 90 seconds</button>
+      <div id="waveBox" style="display:none;margin-top:12px">
+        <svg viewBox="0 0 340 96" width="100%"><path id="wavePath" d="" fill="none" stroke="var(--accent2)" stroke-width="2" opacity="0.8"/><circle id="waveDot" r="5" fill="#eef2fb"/></svg>
+        <div style="text-align:center;font-size:.92rem;color:#dff3ec;min-height:1.4em" id="waveMsg"></div>
+        <div class="timer" id="waveTimer" style="font-size:1.4rem">1:30</div>
+      </div>
+      <div class="section-label" style="margin-top:16px">Quick log <small>one tap, prefilled</small></div>
+      <div class="chipwrap" style="margin-bottom:4px">
+        <button class="chip" id="qp1">Saw her — spike</button>
+        <button class="chip" id="qp2">Urge to text</button>
+        <button class="chip" id="qp3">Anger flash</button>
+      </div>
       <button class="btn calm" id="openEventForm" style="margin-top:12px">＋ Log Emotional Event</button>
       <p class="quote" style="margin-top:14px">This feeling wants me to act because it works for ten minutes and costs me a week. I can feel all of it and still not act.</p>
+    </div>
+    <div class="card" id="reasonsCard">
+      <h2>Why I'm doing this</h2>
+      <p class="hint">Read this when it gets loud. Edit it any time.</p>
+      <div id="reasonsList"></div>
+      <div class="btnrow" style="margin-top:10px"><input type="text" id="reasonInput" placeholder="Add a reason…" style="flex:2;min-width:0"><button class="btn ghost sm" id="addReason" style="flex:1">Add</button></div>
     </div>
     <div class="card" id="eventFormCard" style="display:none">
       <div class="x" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -230,7 +255,10 @@
 
   <section class="view" id="view-activity">
     <div class="card">
-      <h2>Today's goals</h2>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px">
+        <svg width="54" height="54" viewBox="0 0 54 54" style="flex:0 0 auto"><circle cx="27" cy="27" r="23" fill="none" stroke="#26304a" stroke-width="6"/><circle id="goalRing" cx="27" cy="27" r="23" fill="none" stroke="var(--accent2)" stroke-width="6" stroke-linecap="round" stroke-dasharray="144.5" stroke-dashoffset="144.5" transform="rotate(-90 27 27)" style="transition:stroke-dashoffset .4s ease"/></svg>
+        <div><h2 style="margin:0">Today's goals</h2><p class="hint" style="margin:2px 0 0" id="goalRingCap">0 of 6</p></div>
+      </div>
       <p class="hint">Rebuilding normal life, one small thing at a time. Tap what you did.</p>
       <div id="goalList"></div>
     </div>
@@ -271,6 +299,10 @@
     <div class="seg" id="dashToggle" style="margin-bottom:14px"><button data-m="overview" class="on">Overview</button><button data-m="history">History</button></div>
     <div id="overviewWrap">
     <div class="card"><h2>Today</h2><div class="grid3" id="todayStats" style="margin-bottom:0"></div></div>
+    <div class="card"><h2>The six weeks</h2><p class="hint">Every square is a day. Tap one to open it.</p><div id="pixelCal"></div>
+      <div class="legend" style="margin-top:10px"><span><i style="background:var(--good)"></i>strong</span><span><i style="background:var(--warn)"></i>mixed</span><span><i style="background:#7a5b6e"></i>rough</span><span><i style="background:#3a4a6e"></i>logged</span><span><i style="background:transparent;border:1px dashed var(--muted2)"></i>ahead</span></div>
+      <div id="milestoneRow" style="margin-top:14px"></div></div>
+    <div class="card"><h2>Recent wins</h2><p class="hint">Proof of change, collected automatically.</p><div id="winsFeed"></div></div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <h2 style="margin:0">Trends</h2>
@@ -280,6 +312,9 @@
     </div>
     <div class="card"><h2>What moves the needle</h2><p class="hint">Patterns from your own data. They appear as you log more.</p><div id="correlations"><p class="empty-state">Keep logging — insights unlock with about a week of data.</p></div></div>
     <div class="card"><h2>Weekly report</h2><p class="hint" id="reportRange"></p><div class="report" id="weeklyReport"></div></div>
+    <div class="card"><h2 id="wkscoreTitle">Weekly scorecard</h2><p class="hint" id="wkscoreHint"></p><div id="wkscoreCats"></div>
+      <div class="callout" style="text-align:center"><div style="font-size:.72rem;color:var(--muted)">Week total</div><div style="font-size:1.8rem;font-weight:720" id="wkscoreTotal">0 / 16</div><div class="mini" id="wkscoreVerdict"></div></div>
+      <button class="btn primary" id="saveWkScore">Save week</button></div>
     </div>
     <div id="historyWrap" style="display:none"></div>
   </section>
@@ -523,6 +558,7 @@ const EVENT_SCHEMA=[
   {type:"chips",key:"location",label:"Location",options:LOCATIONS},
   {type:"textarea",key:"what_happened",label:"What happened?",placeholder:"A sentence or two."},
   {type:"textarea",key:"thoughts",label:"What thoughts appeared?",placeholder:"e.g. She's gone forever · I need to reach out · I ruined everything"},
+  {type:"textarea",key:"reframe",label:"A kinder, truer thought (optional)",placeholder:"“She's gone forever” → “I can't know the future. I know what I'm building today.”"},
   {type:"section",label:"Intensity now",small:"0–10"},
   {type:"slider",key:"anxiety",label:"Anxiety"},{type:"slider",key:"anger",label:"Anger"},
   {type:"slider",key:"urge_contact",label:"Urge to contact her"},{type:"slider",key:"physical",label:"Physical symptom intensity"},
@@ -625,6 +661,8 @@ function renderGoals(){
   DAILY_GOALS.forEach(gg=>{const row=el("div","goalrow"+(g[gg.k]?" done":""));
     row.innerHTML='<div class="goalbox">'+(g[gg.k]?"✓":"")+'</div><div class="gtext">'+esc(gg.t)+'</div>';
     row.onclick=()=>{g[gg.k]=!g[gg.k];g._u=Date.now();save();renderGoals();renderStreaks();renderDash();};box.appendChild(row);});
+  const done=DAILY_GOALS.filter(x=>g[x.k]).length,ring=$("#goalRing");
+  if(ring){ring.style.strokeDashoffset=String((144.5*(1-done/6)).toFixed(1));$("#goalRingCap").textContent=done+" of 6";}
 }
 
 /* ============ STREAKS ============ */
@@ -752,7 +790,7 @@ function renderDash(){
     {b:n.success!=null?n.success:"—",c:"Day score"}
   ];
   cards.forEach(c=>{const d=el("div","stat");d.innerHTML='<div class="big"'+(c.col?' style="color:'+c.col+'"':'')+'>'+c.b+'</div><div class="cap">'+c.c+'</div>';ts.appendChild(d);});
-  renderTrends();renderCorrelations();renderReport();
+  renderPixelCal();renderWins();renderWeeklyScore();renderTrends();renderCorrelations();renderReport();
 }
 function goalDone(d){const g=DB.goals[d]||{};return DAILY_GOALS.filter(x=>g[x.k]).length;}
 
@@ -857,6 +895,124 @@ function renderReport(){
   if(top(toolCount))rows.push('<p><b>Coping that worked best:</b> '+esc(top(toolCount))+' (most common in controlled events)</p>');
   $("#weeklyReport").innerHTML=rows.length?rows.join(""):'<p class="empty-state">Your first weekly report appears once you have a few days logged.</p>';
 }
+
+/* ============ SIX-WEEK PIXELS, MILESTONES, WINS ============ */
+function renderPixelCal(){
+  const box=$("#pixelCal");if(!box)return;box.innerHTML="";box.className="pixgrid";
+  const start=DB.settings.startDate;
+  for(let i=0;i<42;i++){
+    const d=addDays(start,i);const cell=el("div","pix");
+    if(d>CUR)cell.classList.add("future");
+    else{
+      const sc=dayScore(d);
+      if(sc!=null)cell.style.background=sc>=70?"var(--good)":sc>=45?"var(--warn)":"#7a5b6e";
+      else if(anyDataOn(d))cell.style.background="#3a4a6e";
+      if(d===CUR)cell.classList.add("today");
+      cell.onclick=()=>{
+        $$("#dashToggle button").forEach(x=>x.classList.toggle("on",x.dataset.m==="history"));
+        $("#overviewWrap").style.display="none";$("#historyWrap").style.display="";
+        histMode="day";histDay=d;histDetailDate=null;renderHistory();window.scrollTo(0,0);
+      };
+    }
+    box.appendChild(cell);
+  }
+  const ms=$("#milestoneRow");if(!ms)return;ms.innerHTML="";
+  const steady=streakOf(STREAKS[2].p);
+  const lab=el("div","mini");lab.style.marginBottom="8px";
+  lab.innerHTML='<b style="color:var(--accent2);font-size:1.05rem">'+steady+' day'+(steady===1?'':'s')+'</b> holding the line — no impulsive contact';
+  ms.appendChild(lab);
+  [3,7,14,21,28,42].forEach(m=>ms.appendChild(el("span","ms-chip"+(steady>=m?" hit":""),(steady>=m?"✓ ":"")+m+"d")));
+}
+function renderWins(){
+  const box=$("#winsFeed");if(!box)return;
+  const wins=[];
+  DB.events.forEach(e=>{if(e.self_control===2||(e.contacted_val==="No"&&num(e.urge_contact)>=6))
+    wins.push({d:e.date,t:"Felt a "+num(e.urge_contact)+"/10 urge — didn't reach out"});});
+  Object.keys(DB.nightly).forEach(d=>{const n=DB.nightly[d];if(n.proud&&String(n.proud).trim())wins.push({d,t:"“"+String(n.proud).trim()+"”"});});
+  wins.sort((a,b)=>a.d<b.d?1:-1);
+  box.innerHTML=wins.length?wins.slice(0,6).map(w=>'<div class="listrow"><span style="font-size:.85rem">'+esc(w.t)+'</span><span class="tag">'+shortD(w.d)+'</span></div>').join(""):'<p class="empty-state">Your wins collect here — held urges, proud moments, hard days handled well.</p>';
+}
+
+/* ============ WEEKLY SCORECARD (0–16, rising targets) ============ */
+const WKSCORE_CATS=[["space","Space with her"],["angerc","Anger control"],["rum","Rumination"],["sleepn","Sleep / nutrition"],["train","Training"],["tools","Therapy / tools"],["workc","Work"],["selfr","Self-respect"]];
+let wkScoreData={};
+function wkTarget(w){return w<=2?10:w<=4?12:14}
+function renderWeeklyScore(){
+  const box=$("#wkscoreCats");if(!box)return;
+  const wk=Math.min(6,Math.max(1,weekIndex(CUR)));
+  DB.weeklyScore=DB.weeklyScore||{};
+  wkScoreData=Object.assign({},DB.weeklyScore[wk]||{});
+  $("#wkscoreTitle").textContent="Week "+wk+" scorecard · "+phaseFor(wk);
+  $("#wkscoreHint").textContent="Grade yourself 0–2 per area, once a week. Target this phase: ≥"+wkTarget(wk)+"/16.";
+  box.innerHTML="";
+  WKSCORE_CATS.forEach(([k,name])=>{
+    const div=el("div");div.style.marginBottom="12px";
+    div.innerHTML='<div style="font-size:.88rem;font-weight:600;margin-bottom:6px">'+name+'</div>';
+    const seg=el("div","seg grade");
+    [["0 · Slipped",0],["1 · Mixed",1],["2 · Held",2]].forEach(([lab,v])=>{
+      const b=el("button","g"+v,lab);b.type="button";if(wkScoreData[k]===v)b.classList.add("on");
+      b.onclick=()=>{seg.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");wkScoreData[k]=v;updateWkScoreTotal(wk);};
+      seg.appendChild(b);});
+    div.appendChild(seg);box.appendChild(div);
+  });
+  updateWkScoreTotal(wk);
+  $("#saveWkScore").onclick=()=>{wkScoreData._u=Date.now();DB.weeklyScore[wk]=wkScoreData;save();flash("Week "+wk+" scorecard saved ✓");};
+}
+function updateWkScoreTotal(wk){
+  const t=WKSCORE_CATS.reduce((s,[k])=>s+(wkScoreData[k]!=null?wkScoreData[k]:0),0);
+  const graded=WKSCORE_CATS.filter(([k])=>wkScoreData[k]!=null).length;
+  $("#wkscoreTotal").textContent=t+" / 16";
+  $("#wkscoreTotal").style.color=graded<8?"var(--ink)":t>=wkTarget(wk)?"var(--good)":"var(--warn)";
+  $("#wkscoreVerdict").textContent=graded<8?(graded+"/8 areas graded"):(t>=wkTarget(wk)?"On target ✓ — sustained beats perfect.":"Below target — that's information for next week, not a verdict.");
+}
+
+/* ============ BREATHING PATTERNS ============ */
+const BREATH_PATTERNS={
+  calm:[["Breathe in…",5,1],["Hold…",1.5,1],["Out slowly…",5,.72]],
+  box:[["In · 4",4,1],["Hold · 4",4,1],["Out · 4",4,.72],["Hold · 4",4,.72]],
+  "478":[["In · 4",4,1],["Hold · 7",7,1],["Out · 8",8,.72]]
+};
+let breathT=null,breathPat="calm";
+function runBreath(){
+  const c=$("#breathCircle"),l=$("#breathLabel");if(!c)return;
+  c.style.animation="none";let i=0;clearTimeout(breathT);
+  (function step(){const ph=BREATH_PATTERNS[breathPat];const st=ph[i%ph.length];
+    l.textContent=st[0];c.style.transition="transform "+st[1]+"s ease-in-out";c.style.transform="scale("+st[2]+")";
+    breathT=setTimeout(step,st[1]*1000);i++;})();
+}
+$$("#breathSeg button").forEach(b=>b.onclick=()=>{$$("#breathSeg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");breathPat=b.dataset.p;runBreath();});
+
+/* ============ URGE SURFING WAVE ============ */
+(function(){const W=340,H=96,A=64,mu=45,sg=18;let d="";
+  for(let t=0;t<=90;t+=2){const x=t/90*W,y=H-10-A*Math.exp(-Math.pow(t-mu,2)/(2*sg*sg));d+=(t?" L":"M")+x.toFixed(1)+" "+y.toFixed(1);}
+  const p=document.getElementById("wavePath");if(p)p.setAttribute("d",d);})();
+let waveInt=null;
+function wavePos(t){const W=340,H=96,A=64,mu=45,sg=18;const x=Math.min(t,90)/90*W,y=H-10-A*Math.exp(-Math.pow(Math.min(t,90)-mu,2)/(2*sg*sg));
+  const dot=$("#waveDot");dot.setAttribute("cx",x.toFixed(1));dot.setAttribute("cy",y.toFixed(1));}
+$("#urgeWaveBtn").onclick=()=>{
+  $("#waveBox").style.display="";clearInterval(waveInt);let t=0;wavePos(0);
+  $("#waveMsg").textContent="An urge is a wave. It rises, peaks, and always falls.";$("#waveTimer").textContent="1:30";
+  waveInt=setInterval(()=>{t++;wavePos(t);
+    $("#waveMsg").textContent=t<30?"It's rising. You don't have to do anything about it.":t<55?"This is the peak. It cannot stay here.":t<90?"It's already passing. Ride it down.":"It passed — and you didn't act. That's the rep.";
+    const left=Math.max(0,90-t);$("#waveTimer").textContent=t>=90?"✓":Math.floor(left/60)+":"+String(left%60).padStart(2,"0");
+    if(t>=90){clearInterval(waveInt);waveInt=null;}
+  },1000);
+};
+
+/* ============ QUICK-LOG PRESETS ============ */
+function openEventWith(pre){eventObj=Object.assign({},pre);$("#evNow").textContent="Now · "+nowHM();buildForm($("#eventForm"),EVENT_SCHEMA,eventObj);$("#eventFormCard").style.display="";$("#eventFormCard").scrollIntoView({behavior:"smooth"});}
+$("#qp1").onclick=()=>openEventWith({event_type:"Anxiety",trigger:"Saw her",location:"Office"});
+$("#qp2").onclick=()=>openEventWith({event_type:"Urge to contact her",trigger:"Being alone"});
+$("#qp3").onclick=()=>openEventWith({event_type:"Anger"});
+
+/* ============ WHY I'M DOING THIS ============ */
+function renderReasons(){
+  const box=$("#reasonsList");if(!box)return;
+  if(!Array.isArray(DB.reasons))DB.reasons=["I don't act while angry — that's who I'm becoming.","My calm can't depend on one person.","Respecting space is self-respect."];
+  box.innerHTML=DB.reasons.length?DB.reasons.map((r,i)=>'<div class="listrow"><span style="font-size:.88rem">'+esc(r)+'</span><button class="del" data-i="'+i+'">×</button></div>').join(""):'<p class="empty-state">Add the reasons you\'re doing this.</p>';
+  box.querySelectorAll(".del").forEach(b=>b.onclick=()=>{DB.reasons.splice(+b.dataset.i,1);save();renderReasons();});
+}
+$("#addReason").onclick=()=>{const v=$("#reasonInput").value.trim();if(!v)return;DB.reasons.push(v);$("#reasonInput").value="";save();renderReasons();};
 
 /* ============ HISTORY (month → week → day → detail) ============ */
 let histNav={level:"months"};
@@ -1002,6 +1158,7 @@ function renderDayDetail(wrap,d){
         '<div class="meta">'+(win?'<span class="badge win">held the line</span>':'')+esc(ev.trigger||"")+(ev.location?' · '+esc(ev.location):'')+'</div>'+
         '<div class="meta" style="margin-top:4px">anx '+num(ev.anxiety)+'→'+num(ev.anxiety_after)+' · urge '+num(ev.urge_contact)+'→'+num(ev.urge_after)+' · self-control '+(ev.self_control!=null?ev.self_control:"—")+'/2'+(ev.duration_min?' · '+ev.duration_min+' min':'')+'</div>'+
         (ev.what_happened?'<div class="meta" style="margin-top:4px">“'+esc(ev.what_happened)+'”</div>':'')+
+        (ev.reframe?'<div class="meta" style="margin-top:2px">Reframe: '+esc(ev.reframe)+'</div>':'')+
         (ev.helped_most?'<div class="meta" style="margin-top:2px">Helped: '+esc(ev.helped_most)+'</div>':'')));});
     wrap.appendChild(c);}
   const acts=actsOn(d);
@@ -1125,8 +1282,8 @@ $$("nav.tab button").forEach(btn=>btn.onclick=()=>{
 $("#rangeSel").onchange=renderTrends;
 
 /* ============ INIT ============ */
-function renderAll(){renderHeader();renderMorning();renderEventList();renderGoals();renderActList();renderStreaks();renderDash();}
-renderHeader();renderMorning();renderDash();
+function renderAll(){renderHeader();renderMorning();renderEventList();renderGoals();renderActList();renderStreaks();renderReasons();renderDash();}
+renderHeader();renderMorning();renderReasons();renderDash();runBreath();
 if(DB.settings.fbConfig)cloudInit(DB.settings.fbConfig);
 else if(typeof BAKED_FB_CONFIG!=="undefined"&&BAKED_FB_CONFIG.apiKey)cloudInit(BAKED_FB_CONFIG);
 
