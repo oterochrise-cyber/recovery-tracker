@@ -1299,7 +1299,7 @@ document.addEventListener("visibilitychange",()=>{ // re-sync whenever the app c
 async function cloudPull(){
   if(!cloud.ref)return;
   try{const snap=await cloud.fns.getDoc(cloud.ref);
-    if(snap.exists()&&snap.data().json){DB=mergeDB(DB,JSON.parse(snap.data().json));save(true);renderAll();cloudStatus("Synced ✓ "+new Date().toLocaleTimeString());}
+    if(snap.exists()&&snap.data().json){DB=mergeDB(DB,JSON.parse(snap.data().json));save(true);renderAll();cloudStatus("Synced ✓ "+new Date().toLocaleTimeString());cloudPush();}
     else{cloudStatus("Synced ✓ (first upload)");cloudPush();}
   }catch(e){cloudStatus("Pull error: "+e.message);}
 }
