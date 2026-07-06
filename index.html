@@ -422,6 +422,14 @@
     <div class="btnrow"><button class="btn ghost sm" id="fbConnect">Connect</button><button class="btn ghost sm" id="fbSignIn">Sign in with Google</button></div>
     <div class="btnrow" style="margin-top:10px"><button class="btn ghost sm" id="fbSyncNow">Sync now</button><button class="btn ghost sm" id="fbSignOut">Sign out</button></div>
   </div>
+  <div class="card"><h2>Data safety &amp; diagnostics</h2>
+    <p class="hint">A full snapshot is saved to your cloud automatically once a day (last 14 kept). If anything ever goes wrong, restore from here.</p>
+    <button class="btn ghost sm" id="snapBtn">🗂 View snapshots</button>
+    <div id="snapList" style="margin-top:10px"></div>
+    <button class="btn ghost sm" id="diagBtn" style="margin-top:12px">🩺 Diagnostics</button>
+    <div id="diagPanel" style="margin-top:10px"></div>
+    <button class="btn ghost sm" id="diagCopy" style="margin-top:10px;display:none">📋 Copy diagnostics (send to Claude)</button>
+  </div>
   <div class="card"><h2>Your data</h2><p class="hint">A local copy lives on this phone. Back it up any time.</p>
     <div class="btnrow"><button class="btn ghost sm" id="exportBtn">Backup (JSON)</button><button class="btn ghost sm" id="importBtn">Import</button></div>
     <input type="file" id="importFile" accept="application/json" style="display:none">
@@ -444,6 +452,7 @@
 </div></nav>
 
 <div class="saved-flash" id="flash">Saved</div>
+<div id="updateToast" style="display:none;position:fixed;top:calc(env(safe-area-inset-top) + 66px);left:14px;right:14px;z-index:85;background:var(--accent);color:#04101e;font-weight:700;padding:13px 16px;border-radius:14px;text-align:center;box-shadow:0 12px 28px rgba(0,0,0,.55);cursor:pointer">⬆️ Update ready — tap to refresh</div>
 
 <div id="sosOverlay" style="display:none;position:fixed;inset:0;z-index:95;background:linear-gradient(170deg,#0a1626,#06080d);overflow-y:auto">
   <div style="max-width:560px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:44px 24px calc(44px + env(safe-area-inset-bottom))" id="sosStage"></div>
@@ -1372,9 +1381,13 @@ function cloudPush(){
       // merge with the cloud copy first so one device can never wipe another's newer data
       const snap=await cloud.fns.getDoc(cloud.ref);
       if(snap.exists()&&snap.data().json){try{DB=mergeDB(DB,JSON.parse(snap.data().json));localStorage.setItem(KEY,JSON.stringify(DB));}catch(x){}}
-      await cloud.fns.setDoc(cloud.ref,{json:JSON.stringify(DB),updatedAt:cloud.fns.serverTimestamp(),device:navigator.platform||""});
+      const payload=JSON.stringify(DB);
+      await cloud.fns.setDoc(cloud.ref,{json:payload,updatedAt:cloud.fns.serverTimestamp(),device:navigator.platform||""});
       cloudStatus("Synced ✓ "+new Date().toLocaleTimeString());
-    }catch(e){cloudStatus("Sync error: "+e.message);}
+      localStorage.setItem("rt.lastPush",String(Date.now()));
+      if(payload.length>700*1024&&!window._sizeWarned){window._sizeWarned=true;flash("⚠️ Data at "+Math.round(payload.length/1024)+" KB — mention this to Claude");}
+      maybeSnapshot();
+    }catch(e){cloudStatus("Sync error: "+e.message);logErr("push: "+e.message);}
   },1500);
 }
 let lastPullT=0;
@@ -1384,7 +1397,7 @@ document.addEventListener("visibilitychange",()=>{ // re-sync whenever the app c
 async function cloudPull(){
   if(!cloud.ref)return;
   try{const snap=await cloud.fns.getDoc(cloud.ref);
-    if(snap.exists()&&snap.data().json){DB=mergeDB(DB,JSON.parse(snap.data().json));save(true);renderAll();cloudStatus("Synced ✓ "+new Date().toLocaleTimeString());cloudPush();}
+    if(snap.exists()&&snap.data().json){DB=mergeDB(DB,JSON.parse(snap.data().json));save(true);renderAll();cloudStatus("Synced ✓ "+new Date().toLocaleTimeString());localStorage.setItem("rt.lastPull",String(Date.now()));cloudPush();}
     else{cloudStatus("Synced ✓ (first upload)");cloudPush();}
   }catch(e){cloudStatus("Pull error: "+e.message);}
 }
@@ -1406,7 +1419,7 @@ async function cloudInit(config){
     cloud.app=appMod.initializeApp(config);
     cloud.auth=authMod.getAuth(cloud.app);
     cloud.db=fsMod.getFirestore(cloud.app);
-    cloud.fns={doc:fsMod.doc,getDoc:fsMod.getDoc,setDoc:fsMod.setDoc,serverTimestamp:fsMod.serverTimestamp,
+    cloud.fns={doc:fsMod.doc,getDoc:fsMod.getDoc,setDoc:fsMod.setDoc,serverTimestamp:fsMod.serverTimestamp,collection:fsMod.collection,getDocs:fsMod.getDocs,deleteDoc:fsMod.deleteDoc,
       GoogleAuthProvider:authMod.GoogleAuthProvider,signInWithPopup:authMod.signInWithPopup,signInWithRedirect:authMod.signInWithRedirect,getRedirectResult:authMod.getRedirectResult,onAuthStateChanged:authMod.onAuthStateChanged,signOut:authMod.signOut};
     DB.settings.fbConfig=config;save(true);
     try{await cloud.fns.getRedirectResult(cloud.auth);}catch(e){}
@@ -1425,6 +1438,95 @@ $("#fbConnect").onclick=()=>{try{cloudInit(parseFbConfig($("#fbConfig").value));
 $("#fbSignIn").onclick=cloudSignIn;
 $("#fbSyncNow").onclick=()=>{cloud.user?cloudPull():cloudStatus("Sign in first.");};
 $("#fbSignOut").onclick=()=>{if(cloud.auth)cloud.fns.signOut(cloud.auth);cloud.user=null;cloud.ref=null;cloudStatus("Signed out. (Config kept on this device.)");};
+
+/* ============ DATA SAFETY: SNAPSHOTS ============ */
+async function maybeSnapshot(){
+  if(!cloud.user||!cloud.db)return;
+  if(DB.settings.lastSnapDay===CUR)return;
+  try{
+    const sref=cloud.fns.doc(cloud.db,"users",cloud.user.uid,"tracker","snap-"+CUR);
+    await cloud.fns.setDoc(sref,{json:JSON.stringify(DB),updatedAt:cloud.fns.serverTimestamp()});
+    DB.settings.lastSnapDay=CUR;localStorage.setItem(KEY,JSON.stringify(DB));
+    const qs=await cloud.fns.getDocs(cloud.fns.collection(cloud.db,"users",cloud.user.uid,"tracker"));
+    const snaps=[];qs.forEach(d=>{if(d.id.indexOf("snap-")===0)snaps.push(d.id);});
+    snaps.sort();
+    while(snaps.length>14){const old=snaps.shift();await cloud.fns.deleteDoc(cloud.fns.doc(cloud.db,"users",cloud.user.uid,"tracker",old));}
+  }catch(e){logErr("snapshot: "+e.message);}
+}
+$("#snapBtn").onclick=async()=>{
+  const box=$("#snapList");
+  if(!cloud.user){box.innerHTML='<p class="mini">Sign in to cloud sync first — snapshots live in your cloud.</p>';return;}
+  box.innerHTML='<p class="mini">Loading…</p>';
+  try{
+    const qs=await cloud.fns.getDocs(cloud.fns.collection(cloud.db,"users",cloud.user.uid,"tracker"));
+    const snaps=[];qs.forEach(d=>{if(d.id.indexOf("snap-")===0)snaps.push({id:d.id,len:(d.data().json||"").length});});
+    snaps.sort((a,b)=>a.id<b.id?1:-1);
+    box.innerHTML=snaps.length?snaps.map(s=>'<div class="listrow"><span style="font-size:.84rem">'+esc(s.id.slice(5))+' <span class="tag">'+Math.round(s.len/1024)+' KB</span></span><button class="btn ghost sm snapR" data-id="'+esc(s.id)+'" style="width:auto;padding:8px 14px">Restore</button></div>').join(""):'<p class="mini">No snapshots yet — one saves automatically each day you sync.</p>';
+    box.querySelectorAll(".snapR").forEach(b=>b.onclick=async()=>{
+      if(!confirm("Replace ALL current data with the "+b.dataset.id.slice(5)+" snapshot? Anything logged after that snapshot will be lost."))return;
+      try{
+        const sd=await cloud.fns.getDoc(cloud.fns.doc(cloud.db,"users",cloud.user.uid,"tracker",b.dataset.id));
+        if(!sd.exists()||!sd.data().json)throw new Error("snapshot missing");
+        DB=JSON.parse(sd.data().json);
+        DB.settings=DB.settings||{};DB.morning=DB.morning||{};DB.nightly=DB.nightly||{};DB.events=DB.events||[];DB.activities=DB.activities||[];DB.goals=DB.goals||{};DB.journal=DB.journal||{};DB.whoopImports=DB.whoopImports||[];
+        localStorage.setItem(KEY,JSON.stringify(DB));
+        await cloud.fns.setDoc(cloud.ref,{json:JSON.stringify(DB),updatedAt:cloud.fns.serverTimestamp(),device:"restore"});
+        renderAll();flash("Restored from "+b.dataset.id.slice(5)+" ✓");
+      }catch(e){flash("Restore failed: "+e.message);logErr("restore: "+e.message);}
+    });
+  }catch(e){box.innerHTML='<p class="mini">Couldn\'t load snapshots: '+esc(e.message)+'</p>';}
+};
+
+/* ============ DIAGNOSTICS & ERROR LOG ============ */
+function logErr(m){try{const L=JSON.parse(localStorage.getItem("rt.errlog")||"[]");L.push({t:new Date().toISOString(),m:String(m).slice(0,300)});while(L.length>20)L.shift();localStorage.setItem("rt.errlog",JSON.stringify(L));}catch(e){}}
+window.addEventListener("error",e=>logErr((e.message||"error")+" @"+String(e.filename||"").split("/").pop()+":"+(e.lineno||"")));
+window.addEventListener("unhandledrejection",e=>logErr("promise: "+((e.reason&&e.reason.message)||String(e.reason)).slice(0,200)));
+function kvRow(k,v){return '<div class="listrow"><span class="tag">'+esc(k)+'</span><span style="font-size:.8rem;text-align:right;overflow-wrap:anywhere;min-width:0">'+esc(String(v))+'</span></div>';}
+function diagData(){
+  const size=JSON.stringify(DB).length;
+  return{
+    liveBuild:null, loadedBuild:BASE_VERSION||"—",
+    signedIn:cloud.user?(cloud.user.email||"yes"):"no",
+    lastPush:localStorage.getItem("rt.lastPush")?new Date(+localStorage.getItem("rt.lastPush")).toLocaleString():"—",
+    lastPull:localStorage.getItem("rt.lastPull")?new Date(+localStorage.getItem("rt.lastPull")).toLocaleString():"—",
+    dataKB:Math.round(size/1024), pctOfLimit:Math.round(size*100/1048576),
+    events:DB.events.length, mornings:Object.keys(DB.morning).length, nights:Object.keys(DB.nightly).length,
+    lastSnapshot:DB.settings.lastSnapDay||"—",
+    online:navigator.onLine, ua:navigator.userAgent.slice(0,90),
+    errors:JSON.parse(localStorage.getItem("rt.errlog")||"[]").slice(-5)
+  };
+}
+$("#diagBtn").onclick=async()=>{
+  const box=$("#diagPanel");box.innerHTML='<p class="mini">Checking…</p>';
+  const d=diagData();
+  try{const r=await fetch("/version.txt?cb="+Date.now(),{cache:"no-store"});if(r.ok)d.liveBuild=(await r.text()).trim();}catch(e){}
+  box.innerHTML=kvRow("Live build",d.liveBuild||"—")+kvRow("Loaded build",d.loadedBuild)+
+    kvRow("Signed in",d.signedIn)+kvRow("Last push",d.lastPush)+kvRow("Last pull",d.lastPull)+
+    kvRow("Data size",d.dataKB+" KB · "+d.pctOfLimit+"% of limit")+
+    kvRow("Events / mornings / nights",d.events+" / "+d.mornings+" / "+d.nights)+
+    kvRow("Last snapshot",d.lastSnapshot)+kvRow("Online",d.online?"yes":"no")+
+    (d.errors.length?'<div class="section-label" style="margin:12px 0 6px">Recent errors</div>'+d.errors.slice().reverse().map(e=>'<div class="mini" style="margin-bottom:4px">'+esc(e.t.slice(5,19).replace("T"," "))+' — '+esc(e.m)+'</div>').join(""):'<div class="mini" style="margin-top:10px">No recent errors ✓</div>');
+  $("#diagCopy").style.display="";
+};
+$("#diagCopy").onclick=async()=>{
+  const d=diagData();
+  try{const r=await fetch("/version.txt?cb="+Date.now(),{cache:"no-store"});if(r.ok)d.liveBuild=(await r.text()).trim();}catch(e){}
+  try{await navigator.clipboard.writeText(JSON.stringify(d,null,1));flash("Diagnostics copied — paste to Claude");}
+  catch(e){flash("Clipboard blocked");}
+};
+
+/* ============ UPDATE CHECK ============ */
+let BASE_VERSION=null;
+async function fetchVersion(){try{const r=await fetch("/version.txt?cb="+Date.now(),{cache:"no-store"});if(!r.ok)return null;const t=(await r.text()).trim();return t.length<80?t:null;}catch(e){return null;}}
+(async()=>{BASE_VERSION=await fetchVersion();})();
+async function checkUpdate(){
+  if(!navigator.onLine||!BASE_VERSION)return;
+  const v=await fetchVersion();
+  if(v&&v!==BASE_VERSION)$("#updateToast").style.display="";
+}
+setInterval(checkUpdate,10*60*1000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkUpdate();});
+$("#updateToast").onclick=()=>location.reload();
 
 /* ============ SETTINGS / DATA ============ */
 $("#gearBtn").onclick=()=>{renderSettings();$("#settingsOverlay").classList.add("open");};
