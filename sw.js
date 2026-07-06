@@ -1,9 +1,9 @@
-/* Offline support for Recovery Tracker.
-   - The page (HTML) is fetched network-first so updates land when you're online,
-     and falls back to the cached copy when you're offline.
-   - Other assets are served cache-first for speed.
+/* Offline support + push notifications for Recovery Tracker.
+   - HTML fetched network-first (updates land when online), cache fallback offline.
+   - Static assets cache-first.
+   - Push: shows notification; tap focuses/opens the app.
    Your logged data lives in localStorage / your Firebase, never here. */
-const CACHE = "recovery-shell-v3";
+const CACHE = "recovery-shell-v4";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./reg.js",
   "./apple-touch-icon.png", "./icon-192.png", "./icon-512.png"];
 
@@ -39,4 +39,21 @@ self.addEventListener("fetch", e => {
       }))
     );
   }
+});
+
+self.addEventListener("push", e => {
+  let d = { title: "Recovery", body: "Open the app.", tag: "rt-general" };
+  try { d = Object.assign(d, e.data.json()); } catch (x) {}
+  e.waitUntil(self.registration.showNotification(d.title, {
+    body: d.body, tag: d.tag, icon: "icon-192.png", badge: "icon-192.png",
+    data: { url: d.url || "./index.html" }
+  }));
+});
+
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  e.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+    for (const c of list) { if ("focus" in c) return c.focus(); }
+    return clients.openWindow((e.notification.data && e.notification.data.url) || "./index.html");
+  }));
 });

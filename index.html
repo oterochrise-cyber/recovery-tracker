@@ -227,6 +227,10 @@
       <div id="briefingBody" style="font-size:.92rem;line-height:1.55"></div>
       <div id="briefingPlay" class="callout" style="margin:12px 0 0"></div>
       <div id="onThisDay" style="margin-top:10px"></div>
+      <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+        <div class="section-label" style="margin:0 0 8px">Word for the moment</div>
+        <p class="quote" id="quoteSpot" style="font-size:.98rem"></p>
+      </div>
       <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
         <div id="intentionShow" style="display:none"><p class="quote" id="intentionText"></p></div>
         <div id="intentionSet">
@@ -419,6 +423,11 @@
       <textarea id="fbConfig" placeholder='Paste the whole  { apiKey: "…", authDomain: "…", … }  here' style="min-height:120px;font-family:ui-monospace,Menlo,monospace;font-size:.8rem"></textarea></label>
     <div class="btnrow"><button class="btn ghost sm" id="fbConnect">Connect</button><button class="btn ghost sm" id="fbSignIn">Sign in with Google</button></div>
     <div class="btnrow" style="margin-top:10px"><button class="btn ghost sm" id="fbSyncNow">Sync now</button><button class="btn ghost sm" id="fbSignOut">Sign out</button></div>
+  </div>
+  <div class="card"><h2>Notifications</h2>
+    <p class="hint" id="notifStatus">Morning nudge (8am), evening close-the-day (9:30pm), and context-aware words at 2pm &amp; 6pm — sent by your own server, shaped by your own data.</p>
+    <button class="btn ghost sm" id="notifEnable">🔔 Enable notifications on this device</button>
+    <button class="btn ghost sm" id="notifTest" style="margin-top:10px">Send a test notification</button>
   </div>
   <div class="card"><h2>Data safety &amp; diagnostics</h2>
     <p class="hint">A full snapshot is saved to your cloud automatically once a day (last 14 kept). If anything ever goes wrong, restore from here.</p>
@@ -1442,6 +1451,31 @@ $("#fbSignIn").onclick=cloudSignIn;
 $("#fbSyncNow").onclick=()=>{cloud.user?cloudPull():cloudStatus("Sign in first.");};
 $("#fbSignOut").onclick=()=>{if(cloud.auth)cloud.fns.signOut(cloud.auth);cloud.user=null;cloud.ref=null;cloudStatus("Signed out. (Config kept on this device.)");};
 
+/* ============ PUSH NOTIFICATIONS ============ */
+const VAPID_PUBLIC="BKKiRzZxZezS5RsiAOwP963hO2iPQegfy98ejtbVk7R7k8IdsWtQJC8lf_A2A1f-dVSx6LA4n5eoEVDhceJAX2k";
+const PUSH_KEY="75rPrcOkpYPZ5f68j2f8ysVmgSTvgMTd";
+function b64ToU8(s){const p="=".repeat((4-s.length%4)%4);const b=atob((s+p).replace(/-/g,"+").replace(/_/g,"/"));return Uint8Array.from(b,c=>c.charCodeAt(0));}
+$("#notifEnable").onclick=async()=>{
+  const st=$("#notifStatus");
+  try{
+    if(!("Notification" in window)||!("serviceWorker" in navigator)||!("PushManager" in window)){st.textContent="Notifications need the installed app (Add to Home Screen) on iOS 16.4+. Open from the home-screen icon and try again.";return;}
+    if(!cloud.user){st.textContent="Sign in to cloud sync first (above) — the sender needs to know where to reach you.";return;}
+    const perm=await Notification.requestPermission();
+    if(perm!=="granted"){st.textContent="Permission not granted — enable in iOS Settings → Notifications → Recovery.";return;}
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(VAPID_PUBLIC)});
+    await cloud.fns.setDoc(cloud.fns.doc(cloud.db,"users",cloud.user.uid,"tracker","push"),{sub:JSON.stringify(sub),tz:-(new Date().getTimezoneOffset()/60),enabled:true,updated:Date.now()});
+    st.textContent="Enabled ✓ — 8am briefing, 2pm & 6pm words, 9:30pm close-the-day.";
+    flash("Notifications on 🔔");
+  }catch(e){st.textContent="Couldn't enable: "+e.message;logErr("push sub: "+e.message);}
+};
+$("#notifTest").onclick=async()=>{
+  try{const r=await fetch("/.netlify/functions/push-cron?test=1&key="+PUSH_KEY);
+    const j=await r.json().catch(()=>({}));
+    flash(r.ok?("Test sent to "+(j.sent||0)+" device(s) — check your lock screen"):"Test failed — server setup not finished yet");
+  }catch(e){flash("Test failed — server setup not finished yet");}
+};
+
 /* ============ DATA SAFETY: SNAPSHOTS ============ */
 async function maybeSnapshot(){
   if(!cloud.user||!cloud.db)return;
@@ -1714,6 +1748,84 @@ function computeBriefing(){
   const body=factors.length?lead+" "+factors.slice(0,3).map(f=>f.charAt(0).toUpperCase()+f.slice(1)).join(". ")+".":lead+" Log your morning (or import WHOOP) and this briefing sharpens.";
   return{type,body,play};
 }
+/* contextual quote engine — tags: heldline, postslip, milestone, red, risk, morning, afternoon, evening, night, generic */
+const QUOTES=[
+ {t:"An hour ago you felt the pull and didn't move. That's not nothing — that's the whole program.",g:["heldline"]},
+ {t:"You just proved the urge wrong. It said you had to act. You didn't.",g:["heldline"]},
+ {t:"That wave came for you and you're still standing here. Log it, then go live your day.",g:["heldline"]},
+ {t:"The rep only counts when it's hard. That one counted.",g:["heldline"]},
+ {t:"You held. Somewhere in your nervous system, a wire just got rerouted.",g:["heldline"]},
+ {t:"A slip is data, not a verdict. The phone is down. Today is already a different day.",g:["postslip"]},
+ {t:"You don't rebuild trust with yourself in one clean day. You rebuild it with the next one. Start now.",g:["postslip"]},
+ {t:"Everyone who ever got steady slipped on the way. The difference is what they did the morning after.",g:["postslip"]},
+ {t:"No spiraling about the spiral. One clean hour, then another.",g:["postslip"]},
+ {t:"The apology landed. The lesson is logged. Carrying the shame all day helps no one — least of all you.",g:["postslip"]},
+ {t:"Look at that number. Nobody gave it to you. Nobody can take it without your permission.",g:["milestone"]},
+ {t:"Milestone days are proof days. This is who you said you'd become — and here you are.",g:["milestone"]},
+ {t:"You didn't white-knuckle this streak. You built it, tool by tool, day by day.",g:["milestone"]},
+ {t:"Mark this one. When the next hard night comes, you'll want to remember today exists.",g:["milestone"]},
+ {t:"Your body is running on fumes — panic will sound louder than it is today. Don't negotiate with it.",g:["red"]},
+ {t:"Red body, boring day. Three meals, a walk, an early night. Heroics are for green days.",g:["red"]},
+ {t:"Whatever feels urgent today probably isn't. Low recovery writes fiction.",g:["red"]},
+ {t:"Today the goal isn't progress. It's not losing ground. That's a real goal.",g:["red"]},
+ {t:"Treat yourself like someone you're taking care of. Because you are.",g:["red"]},
+ {t:"Yesterday's urge echoes into today. Pre-decide now: if it comes, it's the pause, not the phone.",g:["risk"]},
+ {t:"You already know the moment this day will test you. Get there first.",g:["risk"]},
+ {t:"High-risk days don't need perfect. They need boring, fed, and busy.",g:["risk"]},
+ {t:"The feeling will make its pitch today. You've heard it before. You know how it ends.",g:["risk"]},
+ {t:"Nothing she does or doesn't do today changes what you're building.",g:["risk"]},
+ {t:"You don't have to win the day before 9am. Just start it fed and steady.",g:["morning"]},
+ {t:"Set the intention. Days with a spine bend less.",g:["morning"]},
+ {t:"This morning's numbers are information, not instructions. You decide the day.",g:["morning"]},
+ {t:"Walk in calm, brief, professional. Nothing to prove, nothing to fix.",g:["morning"]},
+ {t:"Today's job: be the man the briefing thinks you are.",g:["morning"]},
+ {t:"One more morning you showed up for yourself. They're adding up.",g:["morning"]},
+ {t:"Mid-day check: eaten? water? shoulders down? Fix what's fixable in five minutes.",g:["afternoon"]},
+ {t:"The afternoon dip is chemistry, not truth. Eat something and reassess.",g:["afternoon"]},
+ {t:"Whatever happened this morning is logged, not carried. The afternoon is new.",g:["afternoon"]},
+ {t:"You're closer to the evening than the morning. Land this day on purpose.",g:["afternoon"]},
+ {t:"The workday is ending. Decide now what tonight is for — before the night decides for you.",g:["evening"]},
+ {t:"Evenings used to run you. Look at you, running one back.",g:["evening"]},
+ {t:"Gym, dinner, a call, a shower. Ordinary evenings are how nervous systems heal.",g:["evening"]},
+ {t:"You don't need company to be okay tonight. But call someone anyway — connection is a tool, not a crutch.",g:["evening"]},
+ {t:"Close the day in the app tonight. The score is how you acted, and you acted.",g:["evening"]},
+ {t:"Nothing true gets decided after 10pm. Put the night to bed and check the math in the morning.",g:["night"]},
+ {t:"The phone stays down. Whatever it promises, it's lying about the price.",g:["night"]},
+ {t:"Night thoughts are loud because it's quiet — not because they're right.",g:["night"]},
+ {t:"You've survived every single night so far. This one's no different.",g:["night"]},
+ {t:"If sleep won't come, the plan still holds: breathe, water, page in a book. Not the feed.",g:["night"]},
+ {t:"Tomorrow's recovery is being written right now. Give it something to work with.",g:["night"]},
+ {t:"A bad day is not a bad trend. And you're not even having a bad day — check the grid.",g:["generic"]},
+ {t:"You're not waiting for someone to come back. You're becoming someone who doesn't need them to.",g:["generic"]},
+ {t:"Feel everything. Act on almost none of it. That's the discipline.",g:["generic"]},
+ {t:"The calm you're building can't be given to you — which means it can't be taken either.",g:["generic"]},
+ {t:"Six weeks of evidence beats six years of promises. Keep collecting.",g:["generic"]},
+ {t:"Your only job today is to act like the person you're becoming. Feelings can come along or not.",g:["generic"]}
+];
+function pickQuote(){
+  const m=DB.morning[CUR]||{},yd=addDays(CUR,-1);
+  const yEvents=eventsOn(yd),tEvents=eventsOn(CUR),now=Date.now();
+  const heldRecent=tEvents.some(e=>{const dt=new Date(e.ts).getTime();return (now-dt)<6*3600*1000&&(e.self_control===2||(e.contacted_val==="No"&&num(e.urge_contact)>=6));});
+  const slip=yEvents.concat(tEvents).some(e=>e.contacted_val&&e.contacted_val!=="No"&&e.contact_nature==="Impulsive");
+  const rec=blank(m.recovery_pct);
+  const steady=streakOf(STREAKS[2].p);
+  const milestone=[3,7,14,21,28,42].indexOf(steady)>=0;
+  const risk=Math.max(0,...yEvents.map(e=>num(e.urge_contact)))>=6;
+  const h=new Date().getHours();
+  const slot=h<12?"morning":h<17?"afternoon":h<21?"evening":"night";
+  const order=[];
+  if(heldRecent)order.push("heldline");
+  if(slip)order.push("postslip");
+  if(milestone)order.push("milestone");
+  if(rec!=null&&rec<34)order.push("red");
+  if(risk)order.push("risk");
+  order.push(slot,"generic");
+  for(const tag of order){
+    const c=QUOTES.filter(q=>q.g.indexOf(tag)>=0);
+    if(c.length){const seed=(daysBetween(DB.settings.startDate,CUR)+1)*7+Math.floor(h/3);return c[seed%c.length];}
+  }
+  return QUOTES[QUOTES.length-1];
+}
 function pickWin(){
   const wins=[];
   DB.events.forEach(e=>{if(e.self_control===2||(e.contacted_val==="No"&&num(e.urge_contact)>=6))wins.push({d:e.date,t:"you felt a "+num(e.urge_contact)+"/10 urge and didn't reach out."});});
@@ -1730,6 +1842,7 @@ function renderBriefing(){
   $("#briefingPlay").innerHTML="<b>The play:</b> "+esc(b.play);
   const win=pickWin();
   $("#onThisDay").innerHTML=win?'<div class="mini">🏆 Proof from your own record — '+shortD(win.d)+': '+esc(win.t)+'</div>':"";
+  const qs=$("#quoteSpot");if(qs)qs.textContent="“"+pickQuote().t+"”";
   const strip=$("#todayStrip");
   if(strip){const m=DB.morning[CUR]||{};const rec=blank(m.recovery_pct);const steady=streakOf(STREAKS[2].p);
     strip.innerHTML='<div class="stat"><div class="big"'+(rec!=null?' style="color:'+recColor(rec)+'"':'')+'>'+(rec!=null?rec+"%":"—")+'</div><div class="cap">Recovery</div></div>'+
