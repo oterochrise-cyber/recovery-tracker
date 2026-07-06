@@ -329,6 +329,7 @@
       <div id="trendCharts"></div>
     </div>
     <div class="card"><h2>What moves the needle</h2><p class="hint">Patterns from your own data. They appear as you log more.</p><div id="correlations"><p class="empty-state">Keep logging — insights unlock with about a week of data.</p></div></div>
+    <div class="card"><h2>Journal impact — yes vs no days</h2><p class="hint">Your WHOOP journal behaviors × your body and mind data.</p><div id="journalImpact"></div></div>
     <div class="card"><h2>Weekly report</h2><p class="hint" id="reportRange"></p><div class="report" id="weeklyReport"></div></div>
     <div class="card"><h2 id="wkscoreTitle">Weekly scorecard</h2><p class="hint" id="wkscoreHint"></p><div id="wkscoreCats"></div>
       <div class="callout" style="text-align:center"><div style="font-size:.72rem;color:var(--muted)">Week total</div><div style="font-size:1.8rem;font-weight:720" id="wkscoreTotal">0 / 16</div><div class="mini" id="wkscoreVerdict"></div></div>
@@ -373,6 +374,9 @@
     <div class="btnrow"><button class="btn ghost sm" id="exportBtn">Backup (JSON)</button><button class="btn ghost sm" id="importBtn">Import</button></div>
     <input type="file" id="importFile" accept="application/json" style="display:none">
     <div class="btnrow" style="margin-top:10px"><button class="btn ghost sm" id="csvDaily">Daily CSV</button><button class="btn ghost sm" id="csvEvents">Events CSV</button></div>
+    <button class="btn ghost sm" id="whoopImportBtn" style="margin-top:10px">⟳ Import WHOOP export (CSV)</button>
+    <p class="hint" style="margin-top:6px">WHOOP app → More → App Settings → Data Export. Pick the CSVs from the email (you can select several at once).</p>
+    <input type="file" id="whoopFiles" accept=".csv,text/csv" multiple style="display:none">
   </div>
   <p class="foot">Six-week recovery tracker · v2</p>
 </div></div>
@@ -410,7 +414,7 @@ let cloud={user:null,ref:null,fns:{}};
 function save(skipCloud){localStorage.setItem(KEY,JSON.stringify(DB));if(!skipCloud&&cloud.user)cloudPush();}
 let DB=load();
 DB.settings=DB.settings||{}; DB.morning=DB.morning||{}; DB.nightly=DB.nightly||{};
-DB.events=DB.events||[]; DB.activities=DB.activities||[]; DB.goals=DB.goals||{};
+DB.events=DB.events||[]; DB.activities=DB.activities||[]; DB.goals=DB.goals||{}; DB.journal=DB.journal||{};
 if(!DB.settings.startDate)DB.settings.startDate=todayISO();
 save();
 
@@ -827,7 +831,7 @@ function renderDash(){
     {b:blank(n.work_prod)!=null?n.work_prod:"—",c:"Work"}
   ];
   cards.forEach(c=>{const d=el("div","stat");d.innerHTML='<div class="big"'+(c.col?' style="color:'+c.col+'"':'')+'>'+c.b+'</div><div class="cap">'+c.c+'</div>';ts.appendChild(d);});
-  renderPixelCal();renderWins();renderWeeklyScore();renderTrends();renderCorrelations();renderReport();
+  renderPixelCal();renderWins();renderWeeklyScore();renderTrends();renderCorrelations();renderJournalImpact();renderReport();
 }
 function goalDone(d){const g=DB.goals[d]||{};return DAILY_GOALS.filter(x=>g[x.k]).length;}
 
@@ -899,6 +903,11 @@ function renderCorrelations(){
   const withTool=DB.events.filter(e=>(e.actions||[]).some(a=>["Used breathing","Used cold water","Went outside","Journaled","Called dad"].indexOf(a)>=0)&&blank(e.duration_min)!=null);
   const noTool=DB.events.filter(e=>!(e.actions||[]).some(a=>["Used breathing","Used cold water","Went outside","Journaled","Called dad"].indexOf(a)>=0)&&blank(e.duration_min)!=null);
   if(withTool.length>=2&&noTool.length>=2)out.push("Episodes where you <b>used a coping tool</b> lasted <b>"+Math.round(avg(withTool.map(e=>+e.duration_min)))+" min</b> vs <b>"+Math.round(avg(noTool.map(e=>+e.duration_min)))+" min</b> without.");
+  // mind → body: what event days do to the next morning
+  g=groupCompare(daysBack(60),d=>eventsOn(d).length>0,d=>morningVal(addDays(d,1),"recovery_pct"));
+  if(g.na>=2&&g.nb>=2)out.push("After days with a <b>logged event</b>, next-morning recovery averaged <b>"+Math.round(g.a)+"%</b> vs <b>"+Math.round(g.b)+"%</b> after event-free days.");
+  g=groupCompare(daysBack(60),d=>eventsOn(d).some(e=>num(e.urge_contact)>=6),d=>morningVal(addDays(d,1),"hrv"));
+  if(g.na>=2&&g.nb>=2)out.push("After <b>high-urge days (6+)</b>, next-morning HRV averaged <b>"+Math.round(g.a)+" ms</b> vs <b>"+Math.round(g.b)+" ms</b>.");
   box.innerHTML=out.length?out.map(s=>'<div class="listrow"><span style="font-size:.85rem;line-height:1.4">'+s+'</span></div>').join(""):'<p class="empty-state">Keep logging — insights unlock with about a week of data.</p>';
 }
 /* weekly report */
@@ -1271,8 +1280,8 @@ async function cloudPull(){
   }catch(e){cloudStatus("Pull error: "+e.message);}
 }
 function mergeDB(a,b){
-  const out={settings:Object.assign({},b.settings||{},a.settings||{}),morning:{},nightly:{},goals:{},events:[],activities:[]};
-  ["morning","nightly","goals"].forEach(c=>{const ks=new Set([...Object.keys(a[c]||{}),...Object.keys(b[c]||{})]);
+  const out={settings:Object.assign({},b.settings||{},a.settings||{}),morning:{},nightly:{},goals:{},journal:{},events:[],activities:[]};
+  ["morning","nightly","goals","journal"].forEach(c=>{const ks=new Set([...Object.keys(a[c]||{}),...Object.keys(b[c]||{})]);
     ks.forEach(d=>{const av=(a[c]||{})[d],bv=(b[c]||{})[d];out[c][d]=(av&&bv)?(((av._u||0)>=(bv._u||0))?av:bv):(av||bv);});});
   const byId=arr=>{const m={};(arr||[]).forEach(x=>m[x.id]=x);return m;};
   ["events","activities"].forEach(c=>{out[c]=Object.values(Object.assign(byId(b[c]),byId(a[c]))).sort((x,y)=>((x.ts||x.id)<(y.ts||y.id)?-1:1));});
@@ -1324,7 +1333,7 @@ async function saveFile(filename,text,mime){
 }
 $("#exportBtn").onclick=()=>saveFile("recovery-backup-"+CUR+".json",JSON.stringify(DB,null,2),"application/json");
 $("#importBtn").onclick=()=>$("#importFile").click();
-$("#importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.settings&&!d.morning)throw 0;DB=d;DB.settings=DB.settings||{};DB.morning=DB.morning||{};DB.nightly=DB.nightly||{};DB.events=DB.events||[];DB.activities=DB.activities||[];DB.goals=DB.goals||{};if(!DB.settings.startDate)DB.settings.startDate=todayISO();save();renderAll();flash("Backup imported ✓");}catch(x){flash("Couldn't read that file")}};r.readAsText(f);};
+$("#importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.settings&&!d.morning)throw 0;DB=d;DB.settings=DB.settings||{};DB.morning=DB.morning||{};DB.nightly=DB.nightly||{};DB.events=DB.events||[];DB.activities=DB.activities||[];DB.goals=DB.goals||{};DB.journal=DB.journal||{};if(!DB.settings.startDate)DB.settings.startDate=todayISO();save();renderAll();flash("Backup imported ✓");}catch(x){flash("Couldn't read that file")}};r.readAsText(f);};
 function csv(rows){return rows.map(r=>r.map(v=>{if(Array.isArray(v))v=v.join("|");if(v==null)v="";v=String(v).replace(/"/g,'""');return /[",\n]/.test(v)?'"'+v+'"':v;}).join(",")).join("\n");}
 $("#csvDaily").onclick=()=>{const mk=Object.keys(MORNING_SCHEMA.filter(f=>f.key).reduce((o,f)=>(o[f.key]=1,o),{}));const nk=NIGHT_SCHEMA.filter(f=>f.key).map(f=>f.key);
   const cols=["date"].concat(mk.map(k=>"m_"+k),nk.map(k=>"n_"+k),["day_success"]);
@@ -1334,6 +1343,100 @@ $("#csvDaily").onclick=()=>{const mk=Object.keys(MORNING_SCHEMA.filter(f=>f.key)
 $("#csvEvents").onclick=()=>{const cols=["date","time","event_type","trigger","location","anxiety","panic","anger","urge_contact","urge_impulsive","contacted_val","contact_nature","duration_min","anxiety_after","urge_after","self_control","to_standards","what_happened","thoughts","helped_most","do_differently"];
   const rows=[cols];DB.events.slice().sort((a,b)=>a.ts<b.ts?-1:1).forEach(e=>rows.push(cols.map(c=>c==="time"?new Date(e.ts).toLocaleTimeString():e[c])));
   saveFile("events-"+CUR+".csv",csv(rows),"text/csv");};
+
+/* ============ WHOOP EXPORT IMPORT ============ */
+function parseCSV(text){const rows=[];let row=[],cur="",q=false;
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){if(ch=='"'){if(text[i+1]=='"'){cur+='"';i++;}else q=false;}else cur+=ch;}
+    else if(ch=='"')q=true;
+    else if(ch==','){row.push(cur);cur="";}
+    else if(ch=='\n'||ch=='\r'){if(ch=='\r'&&text[i+1]=='\n')i++;row.push(cur);cur="";if(row.length>1||(row[0]&&row[0].trim()!==""))rows.push(row);row=[];}
+    else cur+=ch;}
+  if(cur!==""||row.length){row.push(cur);if(row.length>1||(row[0]&&row[0].trim()!==""))rows.push(row);}
+  return rows;}
+function whoopDay(cycleStart){ // journal/cycle rows: sleep starting after 3pm belongs to the NEXT day's wake
+  const dt=cycleStart.slice(0,10),hr=+cycleStart.slice(11,13);
+  return hr>=15?addDays(dt,1):dt;}
+$("#whoopImportBtn").onclick=()=>$("#whoopFiles").click();
+$("#whoopFiles").onchange=async e=>{
+  const files=[...e.target.files];if(!files.length)return;
+  let days=0,journal=0,workouts=0,skipped=0;
+  for(const f of files){
+    let text;try{text=await f.text();}catch(x){skipped++;continue;}
+    const rows=parseCSV(text);if(rows.length<2){skipped++;continue;}
+    const H=rows[0].map(h=>h.trim());const idx=n=>H.indexOf(n);
+    if(H.indexOf("Recovery score %")>=0){ // physiological_cycles.csv
+      for(let r=1;r<rows.length;r++){const R=rows[r];
+        const wake=R[idx("Wake onset")];const cs=R[idx("Cycle start time")];
+        const d=wake?wake.slice(0,10):(cs?whoopDay(cs):null);if(!d)continue;
+        const rec=R[idx("Recovery score %")];if(rec===""||rec==null){continue;}
+        const m=DB.morning[d]||{};
+        const set=(k,v,fn)=>{if(v!==""&&v!=null)m[k]=String(fn?fn(v):v);};
+        set("recovery_pct",rec,v=>Math.round(+v));
+        set("rhr",R[idx("Resting heart rate (bpm)")],v=>Math.round(+v));
+        set("hrv",R[idx("Heart rate variability (ms)")],v=>Math.round(+v));
+        set("sleep_perf",R[idx("Sleep performance %")]);
+        set("resp_rate",R[idx("Respiratory rate (rpm)")]);
+        set("hours_slept",R[idx("Asleep duration (min)")],v=>Math.round(+v/6)/10);
+        set("sleep_need",R[idx("Sleep need (min)")],v=>Math.round(+v/6)/10);
+        set("sleep_debt",R[idx("Sleep debt (min)")]);
+        set("sleep_consistency",R[idx("Sleep consistency %")]);
+        set("skin_temp",R[idx("Skin temp (celsius)")]);
+        set("day_strain",R[idx("Day Strain")]);
+        m._u=Date.now();m._whoop=1;DB.morning[d]=m;days++;
+      }
+    } else if(H.indexOf("Question text")>=0){ // journal_entries.csv
+      DB.journal=DB.journal||{};
+      for(let r=1;r<rows.length;r++){const R=rows[r];
+        const cs=R[idx("Cycle start time")],q=R[idx("Question text")],a=R[idx("Answered yes")];
+        if(!cs||!q)continue;
+        const d=whoopDay(cs);
+        const J=DB.journal[d]=DB.journal[d]||{};
+        J[q]=String(a).toLowerCase()==="true";J._u=Date.now();journal++;
+      }
+    } else if(H.indexOf("Activity name")>=0){ // workouts.csv
+      for(let r=1;r<rows.length;r++){const R=rows[r];
+        const ws=R[idx("Workout start time")];if(!ws)continue;
+        const d=ws.slice(0,10),dur=+R[idx("Duration (min)")]||0,st=+R[idx("Activity Strain")]||0;
+        const m=DB.morning[d]||{};
+        m.workout_strain=String(Math.max(+(m.workout_strain||0),Math.round(st*10)/10));
+        m._u=Date.now();DB.morning[d]=m;
+        if(dur>=20){const g=goalsFor(d);g.gym=true;g._u=Date.now();}
+        workouts++;
+      }
+    } else { skipped++; } // sleeps.csv etc. — physio file already carries the sleep summary
+  }
+  save();renderAll();
+  flash("WHOOP import ✓ "+days+" day"+(days===1?"":"s")+" · "+journal+" journal answers"+(workouts?" · "+workouts+" workouts":""));
+  e.target.value="";
+};
+
+/* ============ JOURNAL IMPACT (yes vs no days) ============ */
+function renderJournalImpact(){
+  const box=$("#journalImpact");if(!box)return;
+  const J=DB.journal||{},dates=Object.keys(J);
+  const qs={};
+  dates.forEach(d=>{Object.keys(J[d]).forEach(q=>{if(q==="_u")return;(qs[q]=qs[q]||{yes:[],no:[]})[J[d][q]?"yes":"no"].push(d);});});
+  const lines=[];
+  Object.entries(qs).forEach(([q,g])=>{
+    if(g.yes.length<2||g.no.length<2)return;
+    const met=(ds,fn)=>avg(ds.map(fn));
+    const recY=met(g.yes,d=>morningVal(d,"recovery_pct")),recN=met(g.no,d=>morningVal(d,"recovery_pct"));
+    const hrvY=met(g.yes,d=>morningVal(d,"hrv")),hrvN=met(g.no,d=>morningVal(d,"hrv"));
+    const anxY=met(g.yes,d=>nightVal(d,"avg_anx")),anxN=met(g.no,d=>nightVal(d,"avg_anx"));
+    const parts=[];
+    if(recY!=null&&recN!=null)parts.push("recovery <b>"+Math.round(recY)+"%</b> vs <b>"+Math.round(recN)+"%</b>");
+    if(hrvY!=null&&hrvN!=null)parts.push("HRV "+Math.round(hrvY)+" vs "+Math.round(hrvN)+" ms");
+    if(anxY!=null&&anxN!=null)parts.push("anxiety "+anxY.toFixed(1)+" vs "+anxN.toFixed(1));
+    if(!parts.length)return;
+    lines.push({diff:(recY!=null&&recN!=null)?Math.abs(recY-recN):0,
+      html:"<b>"+esc(q.replace(/\?$/,""))+"</b> — yes-days vs no-days: "+parts.join(" · ")+' <span class="tag">('+g.yes.length+"y/"+g.no.length+"n)</span>"});
+  });
+  lines.sort((a,b)=>b.diff-a.diff);
+  box.innerHTML=lines.length
+    ?lines.slice(0,8).map(l=>'<div class="listrow"><span style="font-size:.85rem;line-height:1.45">'+l.html+'</span></div>').join("")
+    :'<p class="empty-state">Import a WHOOP export (with journal entries) — impacts appear once a behavior has 2+ yes and 2+ no days.</p>';
+}
 
 /* ============ NAV ============ */
 $$("nav.tab button").forEach(btn=>btn.onclick=()=>{
