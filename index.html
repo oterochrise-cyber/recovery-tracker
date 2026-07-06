@@ -318,7 +318,7 @@
     <div id="overviewWrap">
     <div class="card"><h2>Today</h2><div class="ringrow" id="heroRings"></div><div class="grid3" id="todayStats" style="margin-bottom:0"></div></div>
     <div class="card"><h2>The six weeks</h2><p class="hint">Every square is a day. Tap one to open it.</p><div id="pixelCal"></div>
-      <div class="legend" style="margin-top:10px"><span><i style="background:var(--good)"></i>strong</span><span><i style="background:var(--warn)"></i>mixed</span><span><i style="background:#7a5b6e"></i>rough</span><span><i style="background:#3a4a6e"></i>logged</span><span><i style="background:transparent;border:1px dashed var(--muted2)"></i>ahead</span></div>
+      <div class="legend" style="margin-top:10px"><span><i style="background:var(--good)"></i>strong</span><span><i style="background:var(--warn)"></i>mixed</span><span><i style="background:#7a5b6e"></i>rough</span><span><i style="background:#3a4a6e"></i>no review yet</span><span><i style="background:transparent;border:1px dashed var(--muted2)"></i>ahead</span></div>
       <div id="milestoneRow" style="margin-top:14px"></div></div>
     <div class="card"><h2>Recent wins</h2><p class="hint">Proof of change, collected automatically.</p><div id="winsFeed"></div></div>
     <div class="card">
@@ -1089,7 +1089,10 @@ function dayBadges(d){const p=[];const r=morningVal(d,"recovery_pct");if(r!=null
 function histBackBtn(fn){const b=el("button","btn ghost sm","‹ Back");b.style.width="auto";b.style.marginBottom="12px";b.onclick=fn;return b;}
 function latestLoggedOr(fallback){const d=allDates();return d.length?d[d.length-1]:fallback;}
 function dayCard(wrap,d,onclick){const sc=dayScore(d);const c=el("div","entrycard");c.style.cursor="pointer";
-  c.innerHTML='<div class="top"><span class="ttl">'+parseISO(d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})+'</span><span class="time">'+(sc!=null?"score "+sc:"")+'</span></div><div class="meta">'+dayBadges(d)+'</div>';
+  const right=sc!=null
+    ?'<span class="time" style="font-weight:800;font-size:.95rem;color:'+(sc>=70?"var(--good)":sc>=45?"var(--warn)":"var(--bad)")+'">'+sc+'</span>'
+    :'<span class="time">no review ›</span>';
+  c.innerHTML='<div class="top"><span class="ttl">'+parseISO(d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})+'</span>'+right+'</div><div class="meta">'+dayBadges(d)+'</div>';
   c.onclick=onclick;wrap.appendChild(c);}
 const HIST_METRICS=[
   {k:"success",label:"Day score",get:d=>dayScore(d),min:0,max:100,good:"up",color:"var(--accent2)"},
@@ -1197,6 +1200,16 @@ function renderDayMode(wrap,dates){
 }
 function renderDayDetail(wrap,d){
   wrap.appendChild(el("h2",null,parseISO(d).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric",year:"numeric"})));
+  if(d<CUR&&!DB.nightly[d]){
+    const c=el("div","callout");
+    c.innerHTML='<b>This day has no nightly review'+(anyDataOn(d)?'':' — or anything else')+' yet.</b><div class="mini" style="margin:4px 0 10px">Backfill it and the day gets a score in your trends, History and the six-weeks grid.</div>';
+    const row=el("div","btnrow");
+    const bn=el("button","btn ghost sm","✎ Night review");
+    bn.onclick=()=>{LOGDATE=d;document.querySelector('nav.tab button[data-view="night"]').click();window.scrollTo(0,0);};
+    row.appendChild(bn);
+    if(!DB.morning[d]){const bm=el("button","btn ghost sm","☀ Morning");bm.onclick=()=>{LOGDATE=d;document.querySelector('nav.tab button[data-view="morning"]').click();window.scrollTo(0,0);};row.appendChild(bm);}
+    c.appendChild(row);wrap.appendChild(c);
+  }
   const m=DB.morning[d];
   if(m){const c=el("div","card");let h='<h2>Morning</h2>';
     h+=kv("Recovery",m.recovery_pct,"%")+kv("HRV",m.hrv," ms")+kv("Resting HR",m.rhr," bpm")+kv("Sleep",m.hours_slept," h")+kv("Sleep performance",m.sleep_perf,"%")+kv("Strain (prev)",m.strain_prev);
@@ -1230,7 +1243,7 @@ function renderDayDetail(wrap,d){
     const rf=REFL.filter(([k])=>n[k]).map(([k,l])=>'<div style="margin-top:8px"><div class="tag" style="font-size:.72rem">'+esc(l)+'</div><div style="font-size:.86rem">'+esc(n[k])+'</div></div>').join("");
     if(rf)h+='<div class="section-label" style="margin:16px 0 6px">Reflection</div>'+rf;
     c.innerHTML=h;wrap.appendChild(c);}
-  if(!m&&!evs.length&&!acts.length&&!g&&!n)wrap.appendChild(el("p","empty-state","Nothing was logged this day."));
+  if(!m&&!evs.length&&!acts.length&&!g&&!n&&d>=CUR)wrap.appendChild(el("p","empty-state","Nothing logged yet."));
 }
 $$("#dashToggle button").forEach(b=>b.onclick=()=>{
   $$("#dashToggle button").forEach(x=>x.classList.toggle("on",x===b));
