@@ -360,7 +360,7 @@
   </section>
 
   <section class="view" id="view-dash">
-    <div class="seg" id="dashToggle" style="margin-bottom:14px"><button data-m="overview" class="on">Overview</button><button data-m="journey">Journey</button><button data-m="history">History</button><button data-m="reflect">Words</button></div>
+    <div class="seg" id="dashToggle" style="margin-bottom:14px"><button data-m="overview" class="on">Overview</button><button data-m="report">📋 Report</button><button data-m="journey">Journey</button><button data-m="history">History</button><button data-m="reflect">Words</button></div>
     <div id="overviewWrap">
     <div class="card"><h2>Today</h2><div class="ringrow" id="heroRings"></div><div class="grid3" id="todayStats" style="margin-bottom:0"></div></div>
     <div class="card"><h2>The six weeks</h2><p class="hint">Every square is a day. Tap one to open it.</p><div id="pixelCal"></div>
@@ -387,6 +387,7 @@
     <div id="historyWrap" style="display:none"></div>
     <div id="journeyWrap" style="display:none"></div>
     <div id="reflectWrap" style="display:none"></div>
+    <div id="reportWrap" style="display:none"></div>
   </section>
 </main>
 
@@ -1350,9 +1351,12 @@ function showDashMode(m){
   $("#historyWrap").style.display=m==="history"?"":"none";
   $("#journeyWrap").style.display=m==="journey"?"":"none";
   $("#reflectWrap").style.display=m==="reflect"?"":"none";
+  $("#reportWrap").style.display=m==="report"?"":"none";
+  window.scrollTo(0,0);
   if(m==="history"){histNav={level:"months"};renderHistory();}
   else if(m==="journey")renderJourney();
   else if(m==="reflect")renderReflections();
+  else if(m==="report")renderSessionReport();
   else renderDash();
 }
 $$("#dashToggle button").forEach(b=>b.onclick=()=>showDashMode(b.dataset.m));
@@ -1833,6 +1837,67 @@ function renderReflections(){
     list.innerHTML=f.length?f.slice(0,200).map(it=>'<div class="entrycard"><div class="top"><span class="ttl" style="font-size:.76rem;color:var(--muted)">'+esc(it.lab)+'</span><span class="time">'+shortD(it.d)+'</span></div><div style="font-size:.9rem;line-height:1.55">'+esc(it.t)+'</div></div>').join(""):'<p class="empty-state">'+(q?"Nothing matches that search.":"Your written words collect here as you log.")+'</p>';
   }
   search.oninput=()=>build(search.value);build("");
+}
+
+/* ============ SESSION REPORT (therapist view) ============ */
+let reportDays=7;
+function repStat(v,c){return '<div class="stat"><div class="big" style="font-size:1.1rem">'+v+'</div><div class="cap">'+c+'</div></div>';}
+function renderSessionReport(){
+  const wrap=$("#reportWrap");if(!wrap)return;wrap.innerHTML="";
+  const seg=el("div","seg");seg.style.marginBottom="14px";
+  [[7,"Last 7 days"],[14,"Last 14 days"],[42,"Whole plan"]].forEach(([n,lab])=>{
+    const b=el("button",null,lab);b.type="button";if(reportDays===n)b.classList.add("on");
+    b.onclick=()=>{reportDays=n;renderSessionReport();};seg.appendChild(b);});
+  wrap.appendChild(seg);
+  const start=reportDays===42?DB.settings.startDate:addDays(CUR,-(reportDays-1));
+  const days=[];for(let d=start;d<=CUR;d=addDays(d,1))days.push(d);
+  const evs=DB.events.filter(e=>e.date>=start&&e.date<=CUR);
+  const nights=days.map(d=>DB.nightly[d]).filter(Boolean);
+  const panics=evs.filter(e=>e.event_type==="Panic").length;
+  const urgesHigh=evs.filter(e=>num(e.urge_contact)>=6);
+  const held=urgesHigh.filter(e=>!(e.contacted_val&&e.contacted_val!=="No")).length;
+  const impulsive=evs.filter(e=>e.contacted_val&&e.contacted_val!=="No"&&e.contact_nature==="Impulsive").length;
+  const avgAnx=avg(nights.map(n=>blank(n.avg_anx)));
+  const peaks=nights.map(n=>num(n.peak_anx)).filter(v=>v>0);
+  const rec=avg(days.map(d=>morningVal(d,"recovery_pct")));
+  const slp=avg(days.map(d=>morningVal(d,"hours_slept")));
+  const sum=el("div","card");
+  sum.innerHTML='<h2>Session summary · '+shortD(start)+' – '+shortD(CUR)+'</h2><div class="grid3" style="margin-bottom:0">'+
+    repStat(evs.length,"Events")+repStat(panics,"Panic episodes")+repStat(held+"/"+urgesHigh.length,"High urges held")+
+    repStat(impulsive,"Impulsive contact")+repStat(avgAnx!=null?avgAnx.toFixed(1):"—","Avg anxiety")+repStat(peaks.length?Math.max.apply(null,peaks):"—","Peak anxiety")+
+    repStat(rec!=null?Math.round(rec)+"%":"—","Avg recovery")+repStat(slp!=null?slp.toFixed(1)+"h":"—","Avg sleep")+repStat(days.filter(anyDataOn).length+"/"+days.length,"Days logged")+
+    '</div>';
+  wrap.appendChild(sum);
+  let any=false;
+  days.forEach(d=>{
+    if(!anyDataOn(d))return;any=true;
+    const card=el("div","card");const sc=dayScore(d);
+    let h='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><b style="font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0">'+parseISO(d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})+'</b>'+
+      (sc!=null?'<span style="font-weight:800;color:'+(sc>=70?"var(--good)":sc>=45?"var(--warn)":"var(--bad)")+'">'+sc+'</span>':'<span class="tag">no night review</span>')+'</div>';
+    const m=DB.morning[d];
+    if(m){const bits=[];if(blank(m.recovery_pct)!=null)bits.push("recovery "+m.recovery_pct+"%");if(blank(m.hours_slept)!=null)bits.push(m.hours_slept+"h sleep");if(blank(m.hrv)!=null)bits.push("HRV "+m.hrv);if(blank(m.m_anxiety)!=null)bits.push("woke anx "+m.m_anxiety+"/10");
+      if(bits.length)h+='<div class="mini" style="margin-bottom:6px">☀️ '+bits.join(" · ")+'</div>';}
+    eventsOn(d).forEach(ev=>{
+      const t=new Date(ev.ts).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+      const contacted=ev.contacted_val&&ev.contacted_val!=="No";
+      const edge=contacted&&ev.contact_nature==="Impulsive"?"var(--bad)":ev.self_control===2?"var(--good)":"var(--warn)";
+      h+='<div style="border-left:3px solid '+edge+';padding:5px 0 5px 12px;margin:10px 0">'+
+        '<div style="font-size:.87rem;font-weight:700">'+t+' · '+esc(ev.event_type||"Event")+(ev.trigger?' — '+esc(ev.trigger):'')+'</div>'+
+        '<div class="mini">anx '+num(ev.anxiety)+'→'+num(ev.anxiety_after)+' · urge '+num(ev.urge_contact)+'→'+num(ev.urge_after)+(ev.duration_min?' · '+ev.duration_min+' min':'')+(contacted?' · <b>contact: '+esc(ev.contacted_val)+(ev.contact_nature?" ("+esc(ev.contact_nature)+")":"")+'</b>':' · no contact')+'</div>'+
+        (ev.what_happened?'<div style="font-size:.85rem;margin-top:4px;line-height:1.55;color:#d7deee">'+esc(ev.what_happened)+'</div>':'')+
+        (ev.reframe?'<div class="mini" style="margin-top:3px">↳ reframe: '+esc(ev.reframe)+'</div>':'')+
+        (ev.helped_most?'<div class="mini" style="margin-top:2px">↳ helped: '+esc(ev.helped_most)+'</div>':'')+'</div>';
+    });
+    const acts=actsOn(d);
+    if(acts.length)h+='<div class="mini" style="margin-top:6px">🏃 '+acts.map(a=>esc(a.activity||a.category)+(a.felt_normal?" ✓":"")).join(" · ")+'</div>';
+    const n=DB.nightly[d];
+    if(n){const bits=[];if(blank(n.peak_anx)!=null)bits.push("peak anx "+n.peak_anx);if(blank(n.peak_urge)!=null)bits.push("peak urge "+n.peak_urge);if(blank(n.rumination_min)!=null)bits.push(n.rumination_min+" min rumination");if(blank(n.happiness)!=null)bits.push("happiness "+n.happiness);
+      if(bits.length)h+='<div class="mini" style="margin-top:6px">🌙 '+bits.join(" · ")+'</div>';
+      if(n.hardest)h+='<div class="mini" style="margin-top:4px"><b>Hardest:</b> '+esc(n.hardest)+'</div>';
+      if(n.proud)h+='<div class="mini" style="margin-top:2px"><b>Proud:</b> '+esc(n.proud)+'</div>';}
+    card.innerHTML=h;wrap.appendChild(card);
+  });
+  if(!any)wrap.appendChild(el("p","empty-state","Nothing logged in this range yet."));
 }
 
 /* ============ PASTE IMPORT (ChatGPT / Claude bridge) ============ */
