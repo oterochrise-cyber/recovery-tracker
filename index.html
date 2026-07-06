@@ -217,9 +217,9 @@
 </div></header>
 
 <main class="wrap">
-  <div class="banner"><div class="big" id="bannerBig">A bad day is not a bad trend.</div><div class="small" id="bannerSmall">The metric that matters: how did I act while I was hurting?</div></div>
 
   <section class="view active" id="view-morning">
+    <div class="banner"><div class="big" id="bannerBig">A bad day is not a bad trend.</div><div class="small" id="bannerSmall">The metric that matters: how did I act while I was hurting?</div></div>
     <div class="card" id="briefingCard">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <h2 style="margin:0">Today's briefing</h2><span id="dayTypeChip" class="phase-pill">—</span>
@@ -227,25 +227,20 @@
       <div id="briefingBody" style="font-size:.92rem;line-height:1.55"></div>
       <div id="briefingPlay" class="callout" style="margin:12px 0 0"></div>
       <div id="onThisDay" style="margin-top:10px"></div>
-    </div>
-    <div class="grid3" id="todayStrip"></div>
-    <div class="card" id="intentionCard">
-      <h2>Today's intention</h2>
-      <div id="intentionShow" style="display:none"><p class="quote" id="intentionText"></p></div>
-      <div id="intentionSet">
-        <input type="text" id="intentionInput" list="intDl" placeholder="e.g. Respect space · Stay calm at work">
-        <datalist id="intDl"><option>Respect space</option><option>Stay calm at work</option><option>Do not act impulsively</option><option>Complete my workout</option><option>Eat three meals</option><option>Focus on production</option></datalist>
-        <button class="btn ghost sm" id="pledgeBtn" style="margin-top:10px">🤝 Set today's intention</button>
+      <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+        <div id="intentionShow" style="display:none"><p class="quote" id="intentionText"></p></div>
+        <div id="intentionSet">
+          <input type="text" id="intentionInput" list="intDl" placeholder="Today's intention — e.g. Respect space">
+          <datalist id="intDl"><option>Respect space</option><option>Stay calm at work</option><option>Do not act impulsively</option><option>Complete my workout</option><option>Eat three meals</option><option>Focus on production</option></datalist>
+          <button class="btn ghost sm" id="pledgeBtn" style="margin-top:10px">🤝 Set today's intention</button>
+        </div>
       </div>
     </div>
+    <div class="grid3" id="todayStrip"></div>
+    <button class="btn calm" id="todaySOS" style="margin-bottom:14px">🆘 SOS — I'm activated</button>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:baseline"><h2>Today's goals</h2><span class="mini" id="todayGoalsCount"></span></div>
       <div id="todayGoals"></div>
-    </div>
-    <div class="btnrow" style="margin-bottom:14px">
-      <button class="btn calm" id="todaySOS">🆘 SOS</button>
-      <button class="btn ghost" id="todayLogEvent">＋ Event</button>
-      <button class="btn ghost" id="todayNight">🌙 Night</button>
     </div>
     <details class="acc" id="morningWrap">
       <summary>🌅 Morning check-in — WHOOP &amp; how you woke</summary>
@@ -267,8 +262,21 @@
 
   <section class="view" id="view-event">
     <div class="card" id="eventIntroCard">
-      <h2 style="text-align:center">Feeling a spike? Pause here first.</h2>
-      <p class="hint" style="text-align:center">Strong feelings are allowed. The win is not acting on them.</p>
+      <h2 style="text-align:center">Feeling a spike?</h2>
+      <p class="hint" style="text-align:center">One tap — it walks you through the whole wave.</p>
+      <button class="btn calm" id="openSOS" style="font-size:1.05rem;padding:17px">🆘 SOS — walk me through it</button>
+      <div class="section-label" style="margin-top:18px">Quick log <small>prefilled</small></div>
+      <div class="chipwrap" style="margin-bottom:4px">
+        <button class="chip" id="qpA">Saw her — spike</button>
+        <button class="chip" id="qpB">Urge to text</button>
+        <button class="chip" id="qpC">Anger flash</button>
+      </div>
+      <button class="btn ghost" id="openEventForm" style="margin-top:12px">＋ Log Emotional Event</button>
+      <button class="btn ghost sm" id="openPastEvent" style="margin-top:10px">🕓 Log a past event</button>
+    </div>
+    <details class="acc" id="moreTools">
+      <summary>🧰 More tools — breathing · 30-min pause · the wave · reasons</summary>
+      <div class="body">
       <div class="seg calm" id="breathSeg" style="margin-bottom:10px"><button data-p="calm" class="on">Calm</button><button data-p="box">Box 4·4·4·4</button><button data-p="478">4·7·8</button></div>
       <div class="breath" id="breathCircle"><span id="breathLabel">Breathe in…</span></div>
       <div class="timer" id="evTimer">30:00</div>
@@ -286,23 +294,12 @@
         <div style="text-align:center;font-size:.92rem;color:#dff3ec;min-height:1.4em" id="waveMsg"></div>
         <div class="timer" id="waveTimer" style="font-size:1.4rem">1:30</div>
       </div>
-      <div class="section-label" style="margin-top:16px">Quick log <small>one tap, prefilled</small></div>
-      <div class="chipwrap" style="margin-bottom:4px">
-        <button class="chip" id="qp1">Saw her — spike</button>
-        <button class="chip" id="qp2">Urge to text</button>
-        <button class="chip" id="qp3">Anger flash</button>
-      </div>
-      <button class="btn calm" id="openSOS" style="margin-top:12px">🆘 SOS — walk me through it</button>
-      <button class="btn calm" id="openEventForm" style="margin-top:12px">＋ Log Emotional Event</button>
-      <button class="btn ghost sm" id="openPastEvent" style="margin-top:10px">🕓 Log a past event (missed one?)</button>
       <p class="quote" style="margin-top:14px">This feeling wants me to act because it works for ten minutes and costs me a week. I can feel all of it and still not act.</p>
-    </div>
-    <div class="card" id="reasonsCard">
-      <h2>Why I'm doing this</h2>
-      <p class="hint">Read this when it gets loud. Edit it any time.</p>
+      <div class="section-label" style="margin-top:16px">Why I'm doing this</div>
       <div id="reasonsList"></div>
       <div class="btnrow" style="margin-top:10px"><input type="text" id="reasonInput" placeholder="Add a reason…" style="flex:2;min-width:0"><button class="btn ghost sm" id="addReason" style="flex:1">Add</button></div>
-    </div>
+      </div>
+    </details>
     <div class="card" id="eventFormCard" style="display:none">
       <div class="x" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <h2 style="margin:0">Emotional event</h2><span class="time" id="evNow"></span>
@@ -374,15 +371,16 @@
       </div>
       <div id="trendCharts"></div>
     </div>
-    <div class="card"><h2>What moves the needle</h2><p class="hint">Patterns from your own data. They appear as you log more.</p><div id="correlations"><p class="empty-state">Keep logging — insights unlock with about a week of data.</p></div></div>
-    <div class="card"><h2>Journal impact — yes vs no days</h2><p class="hint">Your WHOOP journal behaviors × your body and mind data.</p><div id="journalImpact"></div></div>
-    <div class="card"><h2>When it hits</h2><p class="hint">Where your spikes cluster — day of week × time of day.</p><div id="patHeat"></div></div>
-    <div class="card"><h2>Trigger intel</h2><p class="hint">Each trigger: how often, how hard, how long — and what works against it.</p><div id="patTriggers"></div></div>
-    <div class="card"><h2>Are episodes shrinking?</h2><p class="hint">The plan's core question, answered by your own record.</p><div id="patDuration"></div></div>
-    <div class="card"><h2>Weekly report</h2><p class="hint" id="reportRange"></p><div class="report" id="weeklyReport"></div></div>
-    <div class="card"><h2 id="wkscoreTitle">Weekly scorecard</h2><p class="hint" id="wkscoreHint"></p><div id="wkscoreCats"></div>
+    <div class="section-label" style="margin:20px 0 10px">Insights <small>tap to open</small></div>
+    <details class="acc"><summary>🔍 What moves the needle</summary><div class="body"><div id="correlations"><p class="empty-state">Keep logging — insights unlock with about a week of data.</p></div></div></details>
+    <details class="acc"><summary>📓 Journal impact — yes vs no days</summary><div class="body"><div id="journalImpact"></div></div></details>
+    <details class="acc"><summary>🕐 When it hits</summary><div class="body"><div id="patHeat"></div></div></details>
+    <details class="acc"><summary>🎯 Trigger intel</summary><div class="body"><div id="patTriggers"></div></div></details>
+    <details class="acc"><summary>📉 Are episodes shrinking?</summary><div class="body"><div id="patDuration"></div></div></details>
+    <details class="acc"><summary>🗒 Weekly scorecard — grade your week</summary><div class="body">
+      <h2 id="wkscoreTitle" style="margin-top:4px">Weekly scorecard</h2><p class="hint" id="wkscoreHint"></p><div id="wkscoreCats"></div>
       <div class="callout" style="text-align:center"><div style="font-size:.72rem;color:var(--muted)">Week total</div><div style="font-size:1.8rem;font-weight:720" id="wkscoreTotal">0 / 16</div><div class="mini" id="wkscoreVerdict"></div></div>
-      <button class="btn primary" id="saveWkScore">Save week</button></div>
+      <button class="btn primary" id="saveWkScore">Save week</button></div></details>
     </div>
     <div id="historyWrap" style="display:none"></div>
     <div id="journeyWrap" style="display:none"></div>
@@ -930,7 +928,7 @@ function renderDash(){
     {b:blank(n.work_prod)!=null?n.work_prod:"—",c:"Work"}
   ];
   cards.forEach(c=>{const d=el("div","stat");d.innerHTML='<div class="big"'+(c.col?' style="color:'+c.col+'"':'')+'>'+c.b+'</div><div class="cap">'+c.c+'</div>';ts.appendChild(d);});
-  renderPixelCal();renderWins();renderWeeklyScore();renderTrends();renderCorrelations();renderJournalImpact();renderPatterns();renderReport();
+  renderPixelCal();renderWins();renderWeeklyScore();renderTrends();renderCorrelations();renderJournalImpact();renderPatterns();
   maybeCelebrate();
 }
 function goalDone(d){const g=DB.goals[d]||{};return DAILY_GOALS.filter(x=>g[x.k]).length;}
@@ -948,10 +946,12 @@ const TREND_DEFS=[
   {id:"gym",label:"Gym days",unit:"",get:d=>gymDay(d),color:"#63c69a",max:1},
   {id:"work",label:"Work productivity",unit:"/10",get:d=>nightVal(d,"work_prod"),color:"#6ea8ff",max:10}
 ];
+let trendsAll=false;
 function renderTrends(){
   const range=+$("#rangeSel").value,box=$("#trendCharts");box.innerHTML="";
   const days=daysBack(range);
-  TREND_DEFS.forEach(t=>{
+  const priority=["rec","sleep","anx","sc"];
+  (trendsAll?TREND_DEFS:TREND_DEFS.filter(t=>priority.indexOf(t.id)>=0)).forEach(t=>{
     const vals=days.map(d=>({d,v:t.get(d)}));
     const have=vals.filter(x=>x.v!=null);
     const card=el("div");card.style.marginBottom="16px";
@@ -971,6 +971,9 @@ function renderTrends(){
       drawBars("tb_"+t.id,"tx_"+t.id,vals.map(x=>({v:x.v,label:dow(x.d),color:t.colorByVal&&x.v!=null?recColor(x.v):null})),{color:t.color,max:t.max});
     }
   });
+  const more=el("button","btn ghost sm",trendsAll?"Show fewer trends ▴":"Show all "+TREND_DEFS.length+" trends ▾");
+  more.style.marginTop="6px";more.onclick=()=>{trendsAll=!trendsAll;renderTrends();};
+  box.appendChild(more);
 }
 /* correlations */
 function groupCompare(dates,cond,metric){const a=[],b=[];dates.forEach(d=>{const mv=metric(d);if(mv==null)return;(cond(d)?a:b).push(mv);});return{a:avg(a),b:avg(b),na:a.length,nb:b.length};}
@@ -1164,9 +1167,9 @@ $("#openPastEvent").onclick=()=>{
   const df=$("#eventForm input[type=date]");
   if(df){df.style.outline="2px solid var(--accent)";df.style.outlineOffset="2px";setTimeout(()=>{df.style.outline="";df.style.outlineOffset="";},3000);}
 };
-$("#qp1").onclick=()=>openEventWith({event_type:"Anxiety",trigger:"Saw her",location:"Office"});
-$("#qp2").onclick=()=>openEventWith({event_type:"Urge to contact her",trigger:"Being alone"});
-$("#qp3").onclick=()=>openEventWith({event_type:"Anger"});
+$("#qpA").onclick=()=>openEventWith({event_type:"Anxiety",trigger:"Saw her",location:"Office"});
+$("#qpB").onclick=()=>openEventWith({event_type:"Urge to contact her",trigger:"Being alone"});
+$("#qpC").onclick=()=>openEventWith({event_type:"Anger"});
 
 /* ============ WHY I'M DOING THIS ============ */
 function renderReasons(){
@@ -1750,8 +1753,6 @@ function renderTodayGoals(){
   const tc=$("#todayGoalsCount");if(tc)tc.textContent=goalDone(CUR)+" of 6";
 }
 $("#todaySOS").onclick=()=>startSOS();
-$("#todayLogEvent").onclick=()=>{document.querySelector('nav.tab button[data-view="event"]').click();setTimeout(()=>$("#openEventForm").click(),60);};
-$("#todayNight").onclick=()=>document.querySelector('nav.tab button[data-view="night"]').click();
 
 /* ============ GUIDED SOS ============ */
 let sosStep=0,sosStartTs=0,sosInt2=null,sosGroundIdx=0;
@@ -1970,6 +1971,9 @@ function renderSessionReport(){
     repStat(rec!=null?Math.round(rec)+"%":"—","Avg recovery")+repStat(slp!=null?slp.toFixed(1)+"h":"—","Avg sleep")+repStat(days.filter(anyDataOn).length+"/"+days.length,"Days logged")+
     '</div>';
   wrap.appendChild(sum);
+  const wr=el("div","card");
+  wr.innerHTML='<h2>vs the week before</h2><p class="hint" id="reportRange"></p><div class="report" id="weeklyReport"></div>';
+  wrap.appendChild(wr);renderReport();
   let any=false;
   days.forEach(d=>{
     if(!anyDataOn(d))return;any=true;
