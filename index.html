@@ -248,6 +248,7 @@
         <button class="chip" id="qp3">Anger flash</button>
       </div>
       <button class="btn calm" id="openEventForm" style="margin-top:12px">＋ Log Emotional Event</button>
+      <button class="btn ghost sm" id="openPastEvent" style="margin-top:10px">🕓 Log a past event (missed one?)</button>
       <p class="quote" style="margin-top:14px">This feeling wants me to act because it works for ten minutes and costs me a week. I can feel all of it and still not act.</p>
     </div>
     <div class="card" id="reasonsCard">
@@ -607,7 +608,7 @@ $("#saveEvent").onclick=()=>{
   const ev=Object.assign({id:Date.now()},eventObj,{ts:d+"T"+tm+":00",date:d});
   DB.events.push(ev);save();
   $("#eventFormCard").style.display="none";eventObj=null;
-  flash(eventMsg(ev));renderEventList();renderDash();renderStreaks();
+  flash(eventMsg(ev)+(d!==CUR?" · saved to "+shortD(d):""));renderEventList();renderDash();renderStreaks();
 };
 function eventMsg(ev){
   const contacted=ev.contacted_val&&ev.contacted_val!=="No";
@@ -1048,6 +1049,12 @@ $("#urgeWaveBtn").onclick=()=>{
 
 /* ============ QUICK-LOG PRESETS ============ */
 function openEventWith(pre){eventObj=Object.assign({log_date:CUR,log_time:nowHM()},pre);$("#evNow").textContent="Now · "+nowHM();buildForm($("#eventForm"),EVENT_SCHEMA,eventObj);$("#eventFormCard").style.display="";$("#eventFormCard").scrollIntoView({behavior:"smooth"});}
+$("#openPastEvent").onclick=()=>{
+  openEventWith({log_date:addDays(CUR,-1),log_time:"12:00"});
+  flash("Set the date & time at the top, then log as normal");
+  const df=$("#eventForm input[type=date]");
+  if(df){df.style.outline="2px solid var(--accent)";df.style.outlineOffset="2px";setTimeout(()=>{df.style.outline="";df.style.outlineOffset="";},3000);}
+};
 $("#qp1").onclick=()=>openEventWith({event_type:"Anxiety",trigger:"Saw her",location:"Office"});
 $("#qp2").onclick=()=>openEventWith({event_type:"Urge to contact her",trigger:"Being alone"});
 $("#qp3").onclick=()=>openEventWith({event_type:"Anger"});
