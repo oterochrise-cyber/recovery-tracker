@@ -41,6 +41,8 @@
   .view{display:none;animation:fade .22s ease}
   .view.active{display:block}
   @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @keyframes drawcheck{to{stroke-dashoffset:0}}
+  @keyframes popin{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
 
   .card{background:linear-gradient(180deg,#141b2b,#0e1420);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:0 10px 26px rgba(0,0,0,.38)}
   .card h2{font-size:.76rem;margin:0 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted)}
@@ -377,6 +379,7 @@
     <button class="btn ghost sm" id="whoopImportBtn" style="margin-top:10px">⟳ Import WHOOP export (CSV)</button>
     <p class="hint" style="margin-top:6px">WHOOP app → More → App Settings → Data Export. Pick the CSVs from the email (you can select several at once).</p>
     <input type="file" id="whoopFiles" accept=".csv,text/csv" multiple style="display:none">
+    <div id="whoopHistory"></div>
   </div>
   <p class="foot">Six-week recovery tracker · v2</p>
 </div></div>
@@ -390,6 +393,18 @@
 </div></nav>
 
 <div class="saved-flash" id="flash">Saved</div>
+
+<div id="importModal" style="display:none;position:fixed;inset:0;z-index:90;background:rgba(4,6,10,.72);backdrop-filter:blur(5px);overflow-y:auto">
+  <div class="card" style="max-width:340px;margin:18vh auto 0;text-align:center;animation:popin .25s ease">
+    <svg width="72" height="72" viewBox="0 0 72 72" style="margin:6px auto 10px;display:block">
+      <circle cx="36" cy="36" r="32" fill="none" stroke="var(--good)" stroke-width="3" opacity=".3"/>
+      <path id="importCheckPath" d="M22 37 L32 47 L51 27" fill="none" stroke="var(--good)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="60" stroke-dashoffset="60"/>
+    </svg>
+    <div style="font-weight:800;font-size:1.05rem;margin-bottom:10px;color:var(--ink)">WHOOP data saved</div>
+    <div id="importModalList" style="text-align:left"></div>
+    <button class="btn primary" id="importModalDone" style="margin-top:14px">Done</button>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -414,7 +429,7 @@ let cloud={user:null,ref:null,fns:{}};
 function save(skipCloud){localStorage.setItem(KEY,JSON.stringify(DB));if(!skipCloud&&cloud.user)cloudPush();}
 let DB=load();
 DB.settings=DB.settings||{}; DB.morning=DB.morning||{}; DB.nightly=DB.nightly||{};
-DB.events=DB.events||[]; DB.activities=DB.activities||[]; DB.goals=DB.goals||{}; DB.journal=DB.journal||{};
+DB.events=DB.events||[]; DB.activities=DB.activities||[]; DB.goals=DB.goals||{}; DB.journal=DB.journal||{}; DB.whoopImports=DB.whoopImports||[];
 if(!DB.settings.startDate)DB.settings.startDate=todayISO();
 save();
 
@@ -1268,10 +1283,19 @@ let cloudPushT;
 function cloudPush(){
   if(!cloud.user||!cloud.ref)return;
   clearTimeout(cloudPushT);cloudPushT=setTimeout(async()=>{
-    try{await cloud.fns.setDoc(cloud.ref,{json:JSON.stringify(DB),updatedAt:cloud.fns.serverTimestamp(),device:navigator.platform||""});cloudStatus("Synced ✓ "+new Date().toLocaleTimeString());}
-    catch(e){cloudStatus("Sync error: "+e.message);}
+    try{
+      // merge with the cloud copy first so one device can never wipe another's newer data
+      const snap=await cloud.fns.getDoc(cloud.ref);
+      if(snap.exists()&&snap.data().json){try{DB=mergeDB(DB,JSON.parse(snap.data().json));localStorage.setItem(KEY,JSON.stringify(DB));}catch(x){}}
+      await cloud.fns.setDoc(cloud.ref,{json:JSON.stringify(DB),updatedAt:cloud.fns.serverTimestamp(),device:navigator.platform||""});
+      cloudStatus("Synced ✓ "+new Date().toLocaleTimeString());
+    }catch(e){cloudStatus("Sync error: "+e.message);}
   },1500);
 }
+let lastPullT=0;
+document.addEventListener("visibilitychange",()=>{ // re-sync whenever the app comes back to the foreground
+  if(!document.hidden&&cloud.user&&Date.now()-lastPullT>30000){lastPullT=Date.now();cloudPull();}
+});
 async function cloudPull(){
   if(!cloud.ref)return;
   try{const snap=await cloud.fns.getDoc(cloud.ref);
@@ -1284,7 +1308,7 @@ function mergeDB(a,b){
   ["morning","nightly","goals","journal"].forEach(c=>{const ks=new Set([...Object.keys(a[c]||{}),...Object.keys(b[c]||{})]);
     ks.forEach(d=>{const av=(a[c]||{})[d],bv=(b[c]||{})[d];out[c][d]=(av&&bv)?(((av._u||0)>=(bv._u||0))?av:bv):(av||bv);});});
   const byId=arr=>{const m={};(arr||[]).forEach(x=>m[x.id]=x);return m;};
-  ["events","activities"].forEach(c=>{out[c]=Object.values(Object.assign(byId(b[c]),byId(a[c]))).sort((x,y)=>((x.ts||x.id)<(y.ts||y.id)?-1:1));});
+  ["events","activities","whoopImports"].forEach(c=>{out[c]=Object.values(Object.assign(byId(b[c]),byId(a[c]))).sort((x,y)=>((x.ts||x.id)<(y.ts||y.id)?-1:1));});
   return out;
 }
 async function cloudInit(config){
@@ -1322,7 +1346,8 @@ $("#gearBtn").onclick=()=>{renderSettings();$("#settingsOverlay").classList.add(
 $("#closeSettings").onclick=()=>$("#settingsOverlay").classList.remove("open");
 function renderSettings(){$("#set_start").value=DB.settings.startDate;$("#set_wp1").value=DB.settings.wp1||"";$("#set_wp2").value=DB.settings.wp2||"";$("#set_dad").value=DB.settings.dad||"";
   if($("#fbConfig")&&!$("#fbConfig").value)$("#fbConfig").value=JSON.stringify(DB.settings.fbConfig||(typeof BAKED_FB_CONFIG!=="undefined"?BAKED_FB_CONFIG:""),null,2);
-  if(cloud.user)cloudStatus("Signed in as "+(cloud.user.email||"you")+" · synced.");}
+  if(cloud.user)cloudStatus("Signed in as "+(cloud.user.email||"you")+" · synced.");
+  renderWhoopHistory();}
 $("#saveSettings").onclick=()=>{DB.settings.startDate=$("#set_start").value||todayISO();DB.settings.wp1=$("#set_wp1").value.trim();DB.settings.wp2=$("#set_wp2").value.trim();DB.settings.dad=$("#set_dad").value.trim();save();flash("Setup saved ✓");renderHeader();renderDash();};
 async function saveFile(filename,text,mime){
   const blob=new Blob([text],{type:mime});
@@ -1333,7 +1358,7 @@ async function saveFile(filename,text,mime){
 }
 $("#exportBtn").onclick=()=>saveFile("recovery-backup-"+CUR+".json",JSON.stringify(DB,null,2),"application/json");
 $("#importBtn").onclick=()=>$("#importFile").click();
-$("#importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.settings&&!d.morning)throw 0;DB=d;DB.settings=DB.settings||{};DB.morning=DB.morning||{};DB.nightly=DB.nightly||{};DB.events=DB.events||[];DB.activities=DB.activities||[];DB.goals=DB.goals||{};DB.journal=DB.journal||{};if(!DB.settings.startDate)DB.settings.startDate=todayISO();save();renderAll();flash("Backup imported ✓");}catch(x){flash("Couldn't read that file")}};r.readAsText(f);};
+$("#importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.settings&&!d.morning)throw 0;DB=d;DB.settings=DB.settings||{};DB.morning=DB.morning||{};DB.nightly=DB.nightly||{};DB.events=DB.events||[];DB.activities=DB.activities||[];DB.goals=DB.goals||{};DB.journal=DB.journal||{};DB.whoopImports=DB.whoopImports||[];if(!DB.settings.startDate)DB.settings.startDate=todayISO();save();renderAll();flash("Backup imported ✓");}catch(x){flash("Couldn't read that file")}};r.readAsText(f);};
 function csv(rows){return rows.map(r=>r.map(v=>{if(Array.isArray(v))v=v.join("|");if(v==null)v="";v=String(v).replace(/"/g,'""');return /[",\n]/.test(v)?'"'+v+'"':v;}).join(",")).join("\n");}
 $("#csvDaily").onclick=()=>{const mk=Object.keys(MORNING_SCHEMA.filter(f=>f.key).reduce((o,f)=>(o[f.key]=1,o),{}));const nk=NIGHT_SCHEMA.filter(f=>f.key).map(f=>f.key);
   const cols=["date"].concat(mk.map(k=>"m_"+k),nk.map(k=>"n_"+k),["day_success"]);
@@ -1360,12 +1385,13 @@ function whoopDay(cycleStart){ // journal/cycle rows: sleep starting after 3pm b
 $("#whoopImportBtn").onclick=()=>$("#whoopFiles").click();
 $("#whoopFiles").onchange=async e=>{
   const files=[...e.target.files];if(!files.length)return;
-  let days=0,journal=0,workouts=0,skipped=0;
+  const results=[];
   for(const f of files){
-    let text;try{text=await f.text();}catch(x){skipped++;continue;}
-    const rows=parseCSV(text);if(rows.length<2){skipped++;continue;}
+    let text;try{text=await f.text();}catch(x){results.push({name:f.name,note:"couldn't read",ok:false});continue;}
+    const rows=parseCSV(text);if(rows.length<2){results.push({name:f.name,note:"empty file",ok:false});continue;}
     const H=rows[0].map(h=>h.trim());const idx=n=>H.indexOf(n);
     if(H.indexOf("Recovery score %")>=0){ // physiological_cycles.csv
+      let days=0;
       for(let r=1;r<rows.length;r++){const R=rows[r];
         const wake=R[idx("Wake onset")];const cs=R[idx("Cycle start time")];
         const d=wake?wake.slice(0,10):(cs?whoopDay(cs):null);if(!d)continue;
@@ -1385,8 +1411,9 @@ $("#whoopFiles").onchange=async e=>{
         set("day_strain",R[idx("Day Strain")]);
         m._u=Date.now();m._whoop=1;DB.morning[d]=m;days++;
       }
+      results.push({name:f.name,note:days+" day"+(days===1?"":"s")+" of recovery & sleep",ok:true});
     } else if(H.indexOf("Question text")>=0){ // journal_entries.csv
-      DB.journal=DB.journal||{};
+      DB.journal=DB.journal||{};let journal=0;
       for(let r=1;r<rows.length;r++){const R=rows[r];
         const cs=R[idx("Cycle start time")],q=R[idx("Question text")],a=R[idx("Answered yes")];
         if(!cs||!q)continue;
@@ -1394,7 +1421,9 @@ $("#whoopFiles").onchange=async e=>{
         const J=DB.journal[d]=DB.journal[d]||{};
         J[q]=String(a).toLowerCase()==="true";J._u=Date.now();journal++;
       }
+      results.push({name:f.name,note:journal+" journal answers",ok:true});
     } else if(H.indexOf("Activity name")>=0){ // workouts.csv
+      let workouts=0;
       for(let r=1;r<rows.length;r++){const R=rows[r];
         const ws=R[idx("Workout start time")];if(!ws)continue;
         const d=ws.slice(0,10),dur=+R[idx("Duration (min)")]||0,st=+R[idx("Activity Strain")]||0;
@@ -1404,12 +1433,39 @@ $("#whoopFiles").onchange=async e=>{
         if(dur>=20){const g=goalsFor(d);g.gym=true;g._u=Date.now();}
         workouts++;
       }
-    } else { skipped++; } // sleeps.csv etc. — physio file already carries the sleep summary
+      results.push({name:f.name,note:workouts+" workouts (gym goals auto-checked)",ok:true});
+    } else if(H.indexOf("Nap")>=0){
+      results.push({name:f.name,note:"skipped — sleep already covered by cycles file",ok:null});
+    } else {
+      results.push({name:f.name,note:"skipped — not a WHOOP export file",ok:null});
+    }
   }
-  save();renderAll();
-  flash("WHOOP import ✓ "+days+" day"+(days===1?"":"s")+" · "+journal+" journal answers"+(workouts?" · "+workouts+" workouts":""));
+  // record in import history (synced like everything else)
+  DB.whoopImports=DB.whoopImports||[];
+  DB.whoopImports.push({id:Date.now(),ts:new Date().toISOString(),files:results.map(r=>({name:r.name,note:r.note}))});
+  if(DB.whoopImports.length>30)DB.whoopImports=DB.whoopImports.slice(-30);
+  save();renderAll();renderWhoopHistory();
+  showImportModal(results);
   e.target.value="";
 };
+function showImportModal(results){
+  $("#importModalList").innerHTML=results.map(r=>{
+    const mark=r.ok===true?'<span style="color:var(--good);font-weight:700">✓</span>':r.ok===false?'<span style="color:var(--bad);font-weight:700">✕</span>':'<span class="tag">–</span>';
+    return '<div class="listrow"><span style="font-size:.82rem;min-width:0;overflow-wrap:anywhere">'+esc(r.name)+'<br><span class="tag">'+esc(r.note)+'</span></span>'+mark+'</div>';
+  }).join("");
+  const p=$("#importCheckPath");
+  p.style.animation="none";void p.getBoundingClientRect();p.style.animation="drawcheck .6s ease .15s forwards";
+  $("#importModal").style.display="";
+}
+$("#importModalDone").onclick=()=>$("#importModal").style.display="none";
+function renderWhoopHistory(){
+  const box=$("#whoopHistory");if(!box)return;
+  const H=(DB.whoopImports||[]).slice().sort((a,b)=>b.id-a.id).slice(0,6);
+  box.innerHTML=H.length?'<div class="section-label" style="margin:14px 0 8px">Import history</div>'+H.map(h=>{
+    const when=new Date(h.id).toLocaleDateString(undefined,{month:"short",day:"numeric"})+" · "+new Date(h.id).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+    return '<div class="entrycard"><div class="top"><span class="ttl" style="font-size:.8rem">'+when+'</span></div><div class="meta" style="overflow-wrap:anywhere">'+h.files.map(f=>esc(f.name)+" — "+esc(f.note)).join("<br>")+'</div></div>';
+  }).join(""):"";
+}
 
 /* ============ JOURNAL IMPACT (yes vs no days) ============ */
 function renderJournalImpact(){
