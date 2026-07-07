@@ -1,6 +1,12 @@
 [build]
   publish = "site"
 
+[build.environment]
+  # These two values are public by design (client-side keys); the scanner stays armed
+  # for the real secrets: FIREBASE_SERVICE_ACCOUNT and VAPID_PRIVATE_KEY.
+  SECRETS_SCAN_OMIT_KEYS = "VAPID_PUBLIC_KEY,QUOTE_KEY"
+  SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = "AIzaSyCwEwE4ZwD3xgJKnXmgZ0iag34navd8OWw"
+
 [functions]
   directory = "netlify/functions"
 
