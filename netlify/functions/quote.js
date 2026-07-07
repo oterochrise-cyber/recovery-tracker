@@ -28,7 +28,8 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       headers: { "content-type": "application/json", "access-control-allow-origin": "*", "cache-control": "no-store" },
-      body: JSON.stringify({ quote: q.text, short: q.short, tag: q.tag, steady: steady, date: today })
+      body: JSON.stringify({ quote: q.text, short: q.short, tag: q.tag, steady: steady, date: today,
+        style: { size: 16, bg: false } }) // lock-screen layout knobs — tune here, no re-paste needed
     };
   } catch (e) {
     return { statusCode: 500, body: "error: " + e.message };

@@ -1,32 +1,34 @@
 // Recovery Tracker — quote widget (Scriptable)
-// Lock screen: big, clean, short quote — no title. Home screen: full dark card.
+// Lock screen: quote only — no background, large text. Home screen: full dark card.
+// Layout values come from the server when available, so future tweaks need no re-paste.
 const URL_BASE = "https://fastidious-taiyaki-f29d4d.netlify.app/.netlify/functions/quote";
 const KEY = "75rPrcOkpYPZ5f68j2f8ysVmgSTvgMTd";
 
 let full = "A bad day is not a bad trend.";
 let short = full;
 let steady = null;
+let style = {};
 try {
   const tz = -(new Date().getTimezoneOffset() / 60);
   const r = new Request(URL_BASE + "?key=" + KEY + "&tz=" + tz);
   const j = await r.loadJSON();
-  if (j && j.quote) { full = j.quote; short = j.short || j.quote; steady = j.steady; }
+  if (j && j.quote) { full = j.quote; short = j.short || j.quote; steady = j.steady; style = j.style || {}; }
 } catch (e) {}
 
 const fam = config.widgetFamily || "";
 const w = new ListWidget();
 w.url = "https://fastidious-taiyaki-f29d4d.netlify.app/index.html";
-w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000); // ask iOS to refresh often
+w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000);
 
 if (fam.indexOf("accessory") === 0) {
-  // ---- LOCK SCREEN: quote only, big and readable ----
-  w.addAccessoryWidgetBackground = true;
-  w.setPadding(2, 4, 2, 4);
+  // ---- LOCK SCREEN: no background, big centered text ----
+  w.addAccessoryWidgetBackground = style.bg === true; // default: OFF
+  w.setPadding(0, 0, 0, 0);
   w.addSpacer();
   const q = w.addText(short);
-  q.font = Font.semiboldSystemFont(14);
+  q.font = Font.boldSystemFont(style.size || 16);
   q.lineLimit = 3;
-  q.minimumScaleFactor = 0.7;
+  q.minimumScaleFactor = 0.55;
   q.centerAlignText();
   w.addSpacer();
 } else {
