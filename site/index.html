@@ -1800,7 +1800,80 @@ const QUOTES=[
  {t:"Feel everything. Act on almost none of it. That's the discipline.",g:["generic"]},
  {t:"The calm you're building can't be given to you — which means it can't be taken either.",g:["generic"]},
  {t:"Six weeks of evidence beats six years of promises. Keep collecting.",g:["generic"]},
- {t:"Your only job today is to act like the person you're becoming. Feelings can come along or not.",g:["generic"]}
+ {t:"Your only job today is to act like the person you're becoming. Feelings can come along or not.",g:["generic"]},
+ {t:"Today is another opportunity to become stronger.",g:["morning"]},
+ {t:"Lead with purpose, not emotion.",g:["morning"]},
+ {t:"Protect your peace before anything else.",g:["morning","generic"]},
+ {t:"Your future isn't waiting on anyone.",g:["morning"]},
+ {t:"Show up for yourself first.",g:["morning"]},
+ {t:"You survived yesterday. Build today.",g:["morning"]},
+ {t:"One good decision at a time.",g:["morning","generic"]},
+ {t:"Your worth doesn't depend on who stayed.",g:["morning","generic"]},
+ {t:"Walk in with confidence. You belong here.",g:["morning"]},
+ {t:"The goal today is progress, not perfection.",g:["morning"]},
+ {t:"Stand tall. You're building your next chapter.",g:["morning","generic"]},
+ {t:"Stay present. Don't let your mind steal today.",g:["afternoon"]},
+ {t:"Focus on what you can control.",g:["afternoon"]},
+ {t:"Your career deserves your full attention.",g:["afternoon"]},
+ {t:"Don't trade today's opportunities for yesterday's memories.",g:["afternoon"]},
+ {t:"Protect your energy.",g:["afternoon"]},
+ {t:"Respond. Don't react.",g:["afternoon","generic"]},
+ {t:"You are more than this breakup.",g:["afternoon"]},
+ {t:"Discipline over emotion.",g:["afternoon"]},
+ {t:"One conversation doesn't define your day.",g:["afternoon"]},
+ {t:"The best revenge is becoming unrecognizable.",g:["afternoon"]},
+ {t:"Turn pain into strength.",g:["weekend","afternoon"]},
+ {t:"Every rep is recovery.",g:["weekend","afternoon"]},
+ {t:"Build the man you'll be proud of.",g:["weekend","morning"]},
+ {t:"Train your body. Heal your mind.",g:["weekend","evening"]},
+ {t:"Lift heavier than your thoughts.",g:["weekend","afternoon"]},
+ {t:"Leave the anger here.",g:["weekend","evening"]},
+ {t:"Progress is your new obsession.",g:["weekend","generic"]},
+ {t:"Weekends have no schedule — build one by noon, or the day builds itself.",g:["weekend"]},
+ {t:"Weekends are where slips live. Plans are where they die.",g:["weekend"]},
+ {t:"Today doesn't need to be great. Gym, people, and a phone that stays boring.",g:["weekend"]},
+ {t:"Don't check what she's doing this weekend. You already know what you're doing: building.",g:["weekend"]},
+ {t:"Social media hits harder on weekends. Skip the feed, keep the streak.",g:["weekend"]},
+ {t:"A weekend won alone still counts. A weekend won with friends counts double.",g:["weekend"]},
+ {t:"The hardest part of today is almost over.",g:["evening"]},
+ {t:"You made it through another day.",g:["evening"]},
+ {t:"Your mind is tired. Don't believe every thought.",g:["evening"]},
+ {t:"Healing happens quietly.",g:["evening"]},
+ {t:"Rest is productive.",g:["evening","red"]},
+ {t:"You don't need answers tonight.",g:["evening"]},
+ {t:"Peace is stronger than panic.",g:["evening"]},
+ {t:"Tomorrow is another chance.",g:["evening"]},
+ {t:"The urge will pass.",g:["evening","risk","generic"]},
+ {t:"Feel it. Don't feed it.",g:["risk","generic"]},
+ {t:"You are safe.",g:["night"]},
+ {t:"Nothing needs to be solved tonight.",g:["night"]},
+ {t:"Sleep heals what worry cannot.",g:["night"]},
+ {t:"Your nervous system deserves rest.",g:["night"]},
+ {t:"Tomorrow doesn't need tonight's anxiety.",g:["night"]},
+ {t:"Your future self is already proud of you.",g:["night"]},
+ {t:"Let today end.",g:["night"]},
+ {t:"You can miss someone without chasing them.",g:["night","generic"]},
+ {t:"Release what you cannot control.",g:["night"]},
+ {t:"You don't have to carry this into tomorrow.",g:["night"]},
+ {t:"This feeling will pass.",g:["risk"]},
+ {t:"Observe. Don't react.",g:["risk"]},
+ {t:"Pain is temporary. Character is permanent.",g:["risk"]},
+ {t:"Stay calm. Stay proud.",g:["risk","heldline"]},
+ {t:"You don't need to prove anything.",g:["risk"]},
+ {t:"You've survived every trigger so far.",g:["risk"]},
+ {t:"Choose dignity.",g:["risk"]},
+ {t:"Your healing matters more than this moment.",g:["risk"]},
+ {t:"Let her choices belong to her.",g:["risk"]},
+ {t:"She doesn't determine your value.",g:["risk"]},
+ {t:"Notice the progress.",g:["milestone"]},
+ {t:"Less panic. More peace.",g:["milestone"]},
+ {t:"You're becoming yourself again.",g:["milestone"]},
+ {t:"Healing isn't linear.",g:["milestone","postslip"]},
+ {t:"Small wins become big changes.",g:["milestone"]},
+ {t:"One day you'll thank yourself for not giving up.",g:["milestone"]},
+ {t:"You are recovering. Keep going.",g:["milestone"]},
+ {t:"You don't need closure to move forward.",g:["generic"]},
+ {t:"Heal for yourself, not for the hope that someone comes back.",g:["generic"]}
 ];
 function pickQuote(){
   const m=DB.morning[CUR]||{},yd=addDays(CUR,-1);
@@ -1811,6 +1884,7 @@ function pickQuote(){
   const steady=streakOf(STREAKS[2].p);
   const milestone=[3,7,14,21,28,42].indexOf(steady)>=0;
   const risk=Math.max(0,...yEvents.map(e=>num(e.urge_contact)))>=6;
+  const dow=new Date().getDay(),weekend=dow===0||dow===6;
   const h=new Date().getHours();
   const slot=h<12?"morning":h<17?"afternoon":h<21?"evening":"night";
   const order=[];
@@ -1819,12 +1893,13 @@ function pickQuote(){
   if(milestone)order.push("milestone");
   if(rec!=null&&rec<34)order.push("red");
   if(risk)order.push("risk");
+  if(weekend)order.push("weekend");
   order.push(slot,"generic");
-  for(const tag of order){
-    const c=QUOTES.filter(q=>q.g.indexOf(tag)>=0);
-    if(c.length){const seed=(daysBetween(DB.settings.startDate,CUR)+1)*7+Math.floor(h/3);return c[seed%c.length];}
-  }
-  return QUOTES[QUOTES.length-1];
+  const pool=[];
+  for(const tag of order){QUOTES.forEach(q=>{if(q.g.indexOf(tag)>=0&&pool.indexOf(q)<0)pool.push(q);});if(pool.length>=10)break;}
+  const list=pool.length?pool:QUOTES;
+  const seed=(daysBetween(DB.settings.startDate,CUR)+1)*31+h; // rotates every hour
+  return list[seed%list.length];
 }
 function pickWin(){
   const wins=[];
