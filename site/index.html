@@ -1418,7 +1418,10 @@ function mergeDB(a,b){
   ["morning","nightly","goals","journal"].forEach(c=>{const ks=new Set([...Object.keys(a[c]||{}),...Object.keys(b[c]||{})]);
     ks.forEach(d=>{const av=(a[c]||{})[d],bv=(b[c]||{})[d];out[c][d]=(av&&bv)?(((av._u||0)>=(bv._u||0))?av:bv):(av||bv);});});
   const byId=arr=>{const m={};(arr||[]).forEach(x=>m[x.id]=x);return m;};
-  ["events","activities","whoopImports"].forEach(c=>{out[c]=Object.values(Object.assign(byId(b[c]),byId(a[c]))).sort((x,y)=>((x.ts||x.id)<(y.ts||y.id)?-1:1));});
+  ["events","activities","whoopImports"].forEach(c=>{ // union by id; on collision the copy with the newer _u wins (tie → local), so edits sync across devices
+    const A=byId(a[c]),B=byId(b[c]),m=Object.assign({},B);
+    Object.keys(A).forEach(id=>{const av=A[id],bv=B[id];m[id]=(bv&&((bv._u||0)>(av._u||0)))?bv:av;});
+    out[c]=Object.values(m).sort((x,y)=>((x.ts||x.id)<(y.ts||y.id)?-1:1));});
   return out;
 }
 async function cloudInit(config){
@@ -2192,7 +2195,7 @@ function renderSessionReport(){
   wr.innerHTML='<h2>vs the week before</h2><p class="hint" id="reportRange"></p><div class="report" id="weeklyReport"></div>';
   wrap.appendChild(wr);renderReport();
   let any=false;
-  days.forEach(d=>{
+  days.slice().reverse().forEach(d=>{ // most recent day first
     if(!anyDataOn(d))return;any=true;
     const card=el("div","card");const sc=dayScore(d);
     let h='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><b style="font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0">'+parseISO(d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})+'</b>'+
