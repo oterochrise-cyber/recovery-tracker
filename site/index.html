@@ -192,6 +192,25 @@
   .empty-state{text-align:center;color:var(--muted);padding:24px 10px;font-size:.88rem}
   .foot{color:var(--muted2);font-size:.72rem;text-align:center;padding:8px 0 4px}
   .arrow-up{color:var(--good)}.arrow-dn{color:var(--bad)}.arrow-flat{color:var(--muted)}
+  .stat.tap{border-color:rgba(62,166,255,.45);cursor:pointer}
+  .stat.tap.on{background:#1b2740}
+  .stat.tap .cap::after{content:" ▾";color:var(--accent)}
+  .cmprow{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;margin:6px 0;cursor:pointer}
+  .cmprow.on{background:#1b2740}
+  .cmprow .lbl{font-size:.85rem;font-weight:650;color:var(--ink)}
+  .cmprow .cap2{font-size:.68rem;color:var(--muted);margin-top:1px}
+  .cmprow .vals{display:flex;align-items:center;gap:7px;flex-shrink:0}
+  .cmprow .prev{font-size:.8rem;color:var(--muted)}
+  .cmprow .now{font-size:.95rem;font-weight:720;color:var(--ink)}
+  .chip-b{font-size:.66rem;padding:3px 9px;border-radius:999px;font-weight:700}
+  .chip-b.good{background:rgba(46,230,168,.13);color:var(--good)}
+  .chip-b.warn{background:rgba(255,209,102,.13);color:var(--warn)}
+  .chip-b.bad{background:rgba(255,92,122,.13);color:var(--bad)}
+  .drillbox{background:#0e1420;border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;margin:6px 0 10px}
+  .drillbox .dhead{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin:7px 0 3px}
+  .dline{border-left:3px solid var(--accent);padding:3px 0 3px 10px;margin:7px 0}
+  .dline .dt{font-size:.76rem;font-weight:700;color:var(--ink)}
+  .dline .dx{font-size:.76rem;color:#aab3c7}
   nav.tab{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 10px);z-index:40;background:rgba(14,19,30,.94);backdrop-filter:blur(18px);border:1px solid #26314a;border-radius:28px;box-shadow:0 14px 34px rgba(0,0,0,.6);padding:2px 4px}
   nav.tab .row{display:flex;max-width:640px;margin:0 auto}
   nav.tab button{flex:1;background:none;border:none;color:var(--muted2);padding:9px 4px 8px;font-family:inherit;font-size:.6rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;transition:color .15s ease}
@@ -1024,34 +1043,71 @@ function renderCorrelations(){
 }
 /* weekly report */
 function periodStat(daysArr,fn){return avg(daysArr.map(fn));}
+function repEvLine(e,color){
+  const t=new Date(e.ts).toLocaleString(undefined,{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+  let x=e.what_happened||e.thoughts||e.trigger||"";x=String(x).replace(/^\([^)]*\)\s*/,"");if(x.length>95)x=x.slice(0,95)+"…";
+  const sc=e.self_control!=null?' · control '+e.self_control+'/2':'';
+  return '<div class="dline" data-d="'+e.date+'" style="cursor:pointer'+(color?';border-color:'+color:'')+'"><div class="dt">'+t+' · '+esc(e.event_type||"Event")+sc+'</div><div class="dx">'+esc(x)+'</div></div>';
+}
+function hookDrillLines(box){ // tap a drill line -> jump to that day's card (if it's rendered)
+  box.querySelectorAll("[data-d]").forEach(n=>n.onclick=()=>{const c=document.getElementById("repd-"+n.dataset.d);if(c)c.scrollIntoView({behavior:"smooth"});});
+}
 function renderReport(){
   const thisW=daysBack(7),prevW=[];for(let i=13;i>=7;i--)prevW.push(addDays(CUR,-i));
-  $("#reportRange").textContent="Last 7 days vs the 7 before.";
-  const rows=[];
-  const cmp=(label,fn,goodIsUp)=>{const a=periodStat(thisW,fn),b=periodStat(prevW,fn);
+  $("#reportRange").textContent="This week vs the week before — tap a row to see the data behind it. Green = good news, amber = unchanged, red = needs attention.";
+  const none='<div class="dx" style="margin:4px 0">Nothing recorded.</div>';
+  const tot=(w,fn)=>{let s=0,any=false;w.forEach(d=>{const v=fn(d);if(v!=null&&v!==""){s+=+v;any=true;}});return any?s:null;};
+  const fmt=v=>v==null?"—":String(Math.round(v*10)/10);
+  const dayLbl=d=>parseISO(d).toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});
+  const perDay=(fn,unit)=>()=>{
+    const rows=w=>w.map(d=>{const v=fn(d);return (v==null||v==="")?"":'<div class="dline"><div class="dt">'+dayLbl(d)+'</div><div class="dx">'+fmt(+v)+(unit||"")+'</div></div>';}).join("");
+    return '<div class="dhead">This week</div>'+(rows(thisW)||none)+'<div class="dhead">Week before</div>'+(rows(prevW)||none);
+  };
+  const evDrill=(filter,color)=>()=>{
+    const inW=w=>DB.events.filter(e=>e.date>=w[0]&&e.date<=w[w.length-1]&&filter(e)).sort((a,b)=>a.ts<b.ts?1:-1).map(e=>repEvLine(e,color)).join("");
+    return '<div class="dhead">This week</div>'+(inW(thisW)||none)+'<div class="dhead">Week before</div>'+(inW(prevW)||none);
+  };
+  const actDrill=()=>{
+    const inW=w=>DB.activities.filter(a=>a.category==="Social"&&a.date>=w[0]&&a.date<=w[w.length-1]).map(a=>'<div class="dline" style="border-color:var(--accent2)"><div class="dt">'+dayLbl(a.date)+(a.time?' · '+a.time:'')+'</div><div class="dx">'+esc(a.activity||"Social")+'</div></div>').join("");
+    return '<div class="dhead">This week</div>'+(inW(thisW)||none)+'<div class="dhead">Week before</div>'+(inW(prevW)||none);
+  };
+  const R=[];
+  const add=(label,cap,kind,fn,goodUp,unit,drill)=>{
+    const a=kind==="tot"?tot(thisW,fn):periodStat(thisW,fn);
+    const b=kind==="tot"?tot(prevW,fn):periodStat(prevW,fn);
     if(a==null&&b==null)return;
-    let arrow="",verdict="";
-    if(a!=null&&b!=null){const up=a>b*1.02,dn=a<b*0.98;const better=goodIsUp?up:dn;const worse=goodIsUp?dn:up;
-      arrow=up?'▲':dn?'▼':'▬';verdict=better?'<span class="arrow-up">improving</span>':worse?'<span class="arrow-dn">watch this</span>':'<span class="arrow-flat">steady</span>';}
-    rows.push('<p><b>'+label+':</b> '+(a!=null?Math.round(a*10)/10:"—")+' '+arrow+' (prev '+(b!=null?Math.round(b*10)/10:"—")+') '+verdict+'</p>');};
-  cmp("Day rating",d=>nightVal(d,"day_rating"),true);
-  cmp("Panic episodes / day",d=>panicCount(d),false);
-  cmp("Avg episode length (min)",d=>{const e=eventsOn(d).filter(x=>blank(x.duration_min)!=null);return e.length?avg(e.map(x=>+x.duration_min)):null;},false);
-  cmp("Contact attempts / day",d=>contactCount(d),false);
-  cmp("Self-control (avg)",d=>selfControlAvg(d),true);
-  cmp("Gym days",d=>gymDay(d),true);
-  cmp("Social connections / day",d=>actsOn(d).filter(a=>a.category==="Social").length,true);
-  cmp("Work productivity",d=>nightVal(d,"work_prod"),true);
-  cmp("Recovery %",d=>morningVal(d,"recovery_pct"),true);
-  cmp("HRV",d=>morningVal(d,"hrv"),true);
-  // best coping + top trigger
+    let cls="warn",word="Steady";
+    if(a!=null&&b!=null){const up=a>b*1.02,dn=a<b*0.98;const better=goodUp?up:dn,worse=goodUp?dn:up;
+      if(better){cls="good";word="Better";}else if(worse){cls="bad";word="Watch";}}
+    else{word="New";}
+    R.push({label:label,cap:cap+" · "+(goodUp?"higher is better":"lower is better"),a:fmt(a)+(unit||""),b:fmt(b)+(unit||""),cls:cls,word:word,drill:drill||perDay(fn,unit)});
+  };
+  add("Day rating","How you scored your days (0–10)","avg",d=>nightVal(d,"day_rating"),true);
+  add("Panic episodes","Total for the week","tot",d=>panicCount(d),false,"",evDrill(e=>e.event_type==="Panic","var(--bad)"));
+  add("Episode length","Average minutes an episode lasted","avg",d=>{const e=eventsOn(d).filter(x=>blank(x.duration_min)!=null);return e.length?avg(e.map(x=>+x.duration_min)):null;},false," min",evDrill(e=>blank(e.duration_min)!=null,"var(--accent)"));
+  add("Contact attempts","Texts, calls, in person","tot",d=>contactCount(d),false,"",evDrill(e=>e.contacted_val&&e.contacted_val!=="No","var(--warn)"));
+  add("Self-control","In events · 2 = held, 0 = acted","avg",d=>selfControlAvg(d),true,"",evDrill(e=>e.self_control!=null,"var(--accent)"));
+  add("Gym days","Days you trained","tot",d=>gymDay(d),true);
+  add("Social connection","Supportive time with people","tot",d=>actsOn(d).filter(a=>a.category==="Social").length,true,"",actDrill);
+  add("Work productivity","From your night reviews (0–10)","avg",d=>nightVal(d,"work_prod"),true);
+  add("Recovery","How charged your body is","avg",d=>morningVal(d,"recovery_pct"),true,"%");
+  add("HRV","Nervous-system recovery (ms)","avg",d=>morningVal(d,"hrv"),true," ms");
   const trigCount={},toolCount={};
   DB.events.forEach(e=>{if(e.trigger)trigCount[e.trigger]=(trigCount[e.trigger]||0)+1;
     if(e.self_control===2)(e.actions||[]).forEach(a=>toolCount[a]=(toolCount[a]||0)+1);});
   const top=o=>{const s=Object.entries(o).sort((a,b)=>b[1]-a[1]);return s.length?s[0][0]:null;};
-  if(top(trigCount))rows.push('<p><b>Biggest trigger:</b> '+esc(top(trigCount))+'</p>');
-  if(top(toolCount))rows.push('<p><b>Coping that worked best:</b> '+esc(top(toolCount))+' (most common in controlled events)</p>');
-  $("#weeklyReport").innerHTML=rows.length?rows.join(""):'<p class="empty-state">Your first weekly report appears once you have a few days logged.</p>';
+  let html=R.map((r,i)=>'<div class="cmprow" data-i="'+i+'"><div style="min-width:0"><div class="lbl">'+r.label+'</div><div class="cap2">'+r.cap+'</div></div><div class="vals"><span class="prev">'+r.b+'</span><span class="prev">→</span><span class="now">'+r.a+'</span><span class="chip-b '+r.cls+'">'+r.word+'</span></div></div><div class="cmpdrill" id="cmpd'+i+'" style="display:none"></div>').join("");
+  const pills=[];
+  if(top(trigCount))pills.push('<span class="tag">Biggest trigger · '+esc(top(trigCount))+'</span>');
+  if(top(toolCount))pills.push('<span class="tag">Best coping · '+esc(top(toolCount))+'</span>');
+  if(pills.length)html+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'+pills.join("")+'</div>';
+  $("#weeklyReport").innerHTML=html||'<p class="empty-state">Your first weekly report appears once you have a few days logged.</p>';
+  $$("#weeklyReport .cmprow").forEach(row=>row.onclick=()=>{
+    const i=+row.dataset.i,box=$("#cmpd"+i),wasOpen=box.style.display!=="none";
+    $$("#weeklyReport .cmpdrill").forEach(b=>{b.style.display="none";});
+    $$("#weeklyReport .cmprow").forEach(r2=>r2.classList.remove("on"));
+    if(!wasOpen){box.className="cmpdrill drillbox";box.innerHTML=R[i].drill();box.style.display="";row.classList.add("on");hookDrillLines(box);}
+  });
 }
 
 /* ============ HERO RINGS (WHOOP-style) ============ */
@@ -2176,28 +2232,47 @@ function renderSessionReport(){
   const days=[];for(let d=start;d<=CUR;d=addDays(d,1))days.push(d);
   const evs=DB.events.filter(e=>e.date>=start&&e.date<=CUR);
   const nights=days.map(d=>DB.nightly[d]).filter(Boolean);
-  const panics=evs.filter(e=>e.event_type==="Panic").length;
+  const panicList=evs.filter(e=>e.event_type==="Panic"),panics=panicList.length;
   const urgesHigh=evs.filter(e=>num(e.urge_contact)>=6);
-  const held=urgesHigh.filter(e=>!(e.contacted_val&&e.contacted_val!=="No")).length;
-  const impulsive=evs.filter(e=>e.contacted_val&&e.contacted_val!=="No"&&e.contact_nature==="Impulsive").length;
+  const heldList=urgesHigh.filter(e=>!(e.contacted_val&&e.contacted_val!=="No")),held=heldList.length;
+  const impList=evs.filter(e=>e.contacted_val&&e.contacted_val!=="No"&&e.contact_nature==="Impulsive"),impulsive=impList.length;
   const avgAnx=avg(nights.map(n=>blank(n.avg_anx)));
   const peaks=nights.map(n=>num(n.peak_anx)).filter(v=>v>0);
   const rec=avg(days.map(d=>morningVal(d,"recovery_pct")));
   const slp=avg(days.map(d=>morningVal(d,"hours_slept")));
   const sum=el("div","card");
+  const T=(v,c,k)=>'<div class="stat'+(k?' tap':'')+'"'+(k?' data-k="'+k+'"':'')+'><div class="big" style="font-size:1.1rem">'+v+'</div><div class="cap">'+c+'</div></div>';
   sum.innerHTML='<h2>Session summary · '+shortD(start)+' – '+shortD(CUR)+'</h2><div class="grid3" style="margin-bottom:0">'+
-    repStat(evs.length,"Events")+repStat(panics,"Panic episodes")+repStat(held+"/"+urgesHigh.length,"High urges held")+
-    repStat(impulsive,"Impulsive contact")+repStat(avgAnx!=null?avgAnx.toFixed(1):"—","Avg anxiety")+repStat(peaks.length?Math.max.apply(null,peaks):"—","Peak anxiety")+
+    T(evs.length,"Events","events")+T(panics,"Panic episodes","panic")+T(held+"/"+urgesHigh.length,"High urges held","urges")+
+    T(impulsive,"Impulsive contact","impulse")+repStat(avgAnx!=null?avgAnx.toFixed(1):"—","Avg anxiety")+repStat(peaks.length?Math.max.apply(null,peaks):"—","Peak anxiety")+
     repStat(rec!=null?Math.round(rec)+"%":"—","Avg recovery")+repStat(slp!=null?slp.toFixed(1)+"h":"—","Avg sleep")+repStat(days.filter(anyDataOn).length+"/"+days.length,"Days logged")+
-    '</div>';
+    '</div><p class="hint" style="margin:8px 0 0">Tap an outlined stat to see the moments behind it. Tap a moment to jump to its day.</p><div id="repDrill"></div>';
   wrap.appendChild(sum);
+  const tileDrills={
+    panic:{h:panics+" panic episode"+(panics===1?"":"s")+" in this range",c:"var(--bad)",list:panicList},
+    urges:{h:held+" of "+urgesHigh.length+" high urges (6+) where you did NOT reach out",c:"var(--good)",list:heldList},
+    impulse:{h:impulsive+" impulsive contact"+(impulsive===1?"":"s")+" in this range",c:"var(--warn)",list:impList}
+  };
+  sum.querySelectorAll(".stat.tap").forEach(t=>t.onclick=()=>{
+    const k=t.dataset.k,box=sum.querySelector("#repDrill"),wasOn=t.classList.contains("on");
+    sum.querySelectorAll(".stat.tap").forEach(x=>x.classList.remove("on"));
+    box.innerHTML="";
+    if(wasOn)return;
+    if(k==="events"){const a=document.getElementById("dayCards");if(a)a.scrollIntoView({behavior:"smooth"});return;}
+    t.classList.add("on");
+    const dd=tileDrills[k];
+    box.innerHTML='<div class="drillbox" style="margin-top:10px"><div class="dhead">'+dd.h+'</div>'+
+      (dd.list.slice().sort((a,b)=>a.ts<b.ts?1:-1).map(e=>repEvLine(e,dd.c)).join("")||'<div class="dx">None in this range.</div>')+'</div>';
+    hookDrillLines(box);
+  });
   const wr=el("div","card");
   wr.innerHTML='<h2>vs the week before</h2><p class="hint" id="reportRange"></p><div class="report" id="weeklyReport"></div>';
   wrap.appendChild(wr);renderReport();
+  const anchor=el("div");anchor.id="dayCards";wrap.appendChild(anchor);
   let any=false;
   days.slice().reverse().forEach(d=>{ // most recent day first
     if(!anyDataOn(d))return;any=true;
-    const card=el("div","card");const sc=dayScore(d);
+    const card=el("div","card");card.id="repd-"+d;const sc=dayScore(d);
     let h='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><b style="font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0">'+parseISO(d).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"})+'</b>'+
       (sc!=null?'<span style="font-weight:800;color:'+(sc>=70?"var(--good)":sc>=45?"var(--warn)":"var(--bad)")+'">'+sc+'</span>':'<span class="tag">no night review</span>')+'</div>';
     const m=DB.morning[d];
