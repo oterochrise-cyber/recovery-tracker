@@ -895,6 +895,8 @@ function renderNight(){
   $("#nightSaved").textContent=DB.nightly[LOGDATE]?"Saved earlier — this updates it.":(LOGDATE===CUR?"Not saved yet tonight.":"Nothing logged for this night yet.");
 }
 function successScore(n,date){
+  // v2 (Chris's call, Jul 18): 45% standards + 22% self-control + 8% recovery + 25% his own
+  // "Overall day" rating − 6/impulsive contact. Panic events can never earn the recovery bonus.
   const triVal=v=>v==="Yes"?2:v==="Partially"?1:0;
   let standPts=STAND_KEYS.reduce((s,k)=>s+triVal(n[k]),0); // 0..20
   const evs=eventsOn(date);
@@ -902,11 +904,14 @@ function successScore(n,date){
   if(evs.length){
     const sc=avg(evs.map(e=>e.self_control!=null?e.self_control:null));
     scPts=sc!=null?(sc/2)*10:8;
-    const dropped=evs.filter(e=>blank(e.anxiety_after)!=null&&num(e.anxiety_after)<num(e.anxiety)).length;
-    recBonus=evs.length?(dropped/evs.length)*10:0;
+    const calm=evs.filter(e=>e.event_type!=="Panic");
+    const dropped=calm.filter(e=>blank(e.anxiety_after)!=null&&num(e.anxiety_after)<num(e.anxiety)).length;
+    recBonus=calm.length?(dropped/calm.length)*10:0;
     impulse=evs.filter(e=>e.contacted_val&&e.contacted_val!=="No"&&e.contact_nature==="Impulsive").length;
   } else {scPts=8;recBonus=6;}
-  let s=(standPts/20)*60 + (scPts/10)*30 + (recBonus/10)*10 - impulse*6;
+  const dr=blank(n.day_rating);
+  let s=(standPts/20)*45 + (scPts/10)*22 + (recBonus/10)*8 - impulse*6;
+  s=dr!=null?s+(+dr/10)*25:s*(100/75); // no rating yet -> scale the behavior part to 100
   return Math.max(0,Math.min(100,Math.round(s)));
 }
 function updateNightScore(){
