@@ -956,11 +956,18 @@ function renderDash(){
     {b:blank(m.m_anxiety)!=null?m.m_anxiety:"—",c:"AM anxiety"},
     {b:blank(m.m_stress)!=null?m.m_stress:"—",c:"AM stress"},
     {b:blank(m.m_urge)!=null?m.m_urge:"—",c:"Urge to contact"},
-    {b:selfControlAvg(CUR)!=null?selfControlAvg(CUR).toFixed(1)+"/2":"—",c:"Self-control"},
+    (function(){ // self-control as a verdict word + counts, not a bare decimal
+      const se=eventsOn(CUR).filter(e=>e.self_control!=null);
+      if(!se.length)return {b:"—",c:"Self-control"};
+      const h=se.filter(e=>e.self_control===2).length,st=se.filter(e=>e.self_control===1).length,sl=se.filter(e=>e.self_control===0).length;
+      const a=avg(se.map(e=>e.self_control));
+      const bits=[];if(h)bits.push(h+" held");if(st)bits.push(st+" struggled");if(sl)bits.push(sl+" slipped");
+      return {b:a>=1.7?"Held":a>=1?"Mixed":"Slipped",c:"Self-control",s:bits.join(" · "),col:a>=1.7?"var(--good)":a>=1?"var(--warn)":"var(--bad)"};
+    })(),
     {b:goalDone(CUR)+"/6",c:"Goals done"},
     {b:blank(n.work_prod)!=null?n.work_prod:"—",c:"Work"}
   ];
-  cards.forEach(c=>{const d=el("div","stat");d.innerHTML='<div class="big"'+(c.col?' style="color:'+c.col+'"':'')+'>'+c.b+'</div><div class="cap">'+c.c+'</div>';ts.appendChild(d);});
+  cards.forEach(c=>{const d=el("div","stat");d.innerHTML='<div class="big"'+(c.col?' style="color:'+c.col+'"':'')+'>'+c.b+'</div><div class="cap">'+c.c+'</div>'+(c.s?'<div class="sub">'+c.s+'</div>':'');ts.appendChild(d);});
   renderPixelCal();renderWins();renderWeeklyScore();renderTrends();renderCorrelations();renderJournalImpact();renderPatterns();
   maybeCelebrate();
 }
@@ -975,7 +982,7 @@ const TREND_DEFS=[
   {id:"panic",label:"Panic episodes",unit:"",get:d=>panicCount(d),color:"#e08a8a"},
   {id:"rum",label:"Rumination",unit:"min",get:d=>nightVal(d,"rumination_min"),color:"#e6b566"},
   {id:"contact",label:"Contact attempts",unit:"",get:d=>contactCount(d),color:"#e08a8a"},
-  {id:"sc",label:"Self-control (avg)",unit:"/2",get:d=>selfControlAvg(d),color:"#63c69a",max:2},
+  {id:"sc",label:"Self-control (2 = held)",unit:"/2",get:d=>selfControlAvg(d),color:"#63c69a",max:2},
   {id:"gym",label:"Gym days",unit:"",get:d=>gymDay(d),color:"#63c69a",max:1},
   {id:"work",label:"Work productivity",unit:"/10",get:d=>nightVal(d,"work_prod"),color:"#6ea8ff",max:10}
 ];
@@ -1155,8 +1162,12 @@ function renderPixelCal(){
 function renderWins(){
   const box=$("#winsFeed");if(!box)return;
   const wins=[];
-  DB.events.forEach(e=>{if(e.self_control===2||(e.contacted_val==="No"&&num(e.urge_contact)>=6))
-    wins.push({d:e.date,t:"Felt a "+num(e.urge_contact)+"/10 urge — didn't reach out"});});
+  DB.events.forEach(e=>{ // contacting her disqualifies a win, whatever the self-control grade
+    if(e.contacted_val&&e.contacted_val!=="No")return;
+    const urge=num(e.urge_contact),hot=Math.max(num(e.anxiety),num(e.anger));
+    if(urge>=6)wins.push({d:e.date,t:"Felt a "+urge+"/10 urge — didn't reach out"});
+    else if(e.self_control===2&&(hot>=7||e.event_type==="Panic"||e.event_type==="Urge to contact her"))
+      wins.push({d:e.date,t:(e.event_type||"Event")+(hot?" at "+hot+"/10":"")+" — held, no contact"});});
   Object.keys(DB.nightly).forEach(d=>{const n=DB.nightly[d];if(n.proud&&String(n.proud).trim())wins.push({d,t:"“"+String(n.proud).trim()+"”"});});
   wins.sort((a,b)=>a.d<b.d?1:-1);
   box.innerHTML=wins.length?wins.slice(0,6).map(w=>'<div class="listrow"><span style="font-size:.85rem">'+esc(w.t)+'</span><span class="tag">'+shortD(w.d)+'</span></div>').join(""):'<p class="empty-state">Your wins collect here — held urges, proud moments, hard days handled well.</p>';
