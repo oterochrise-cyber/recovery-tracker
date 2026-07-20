@@ -165,7 +165,9 @@
   .jnode.done{background:var(--good);border-color:var(--good);color:#052018}
   .jnode.cur{border-color:var(--accent2);color:var(--accent2);animation:glowpulse 2.2s ease infinite}
   .pixgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-  .pix{aspect-ratio:1;border-radius:7px;background:#26304a;cursor:pointer}
+  .pixcell{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+  .pixdate{font-size:.6rem;color:#6973a7;line-height:1;white-space:nowrap}
+  .pix{aspect-ratio:1;width:100%;border-radius:7px;background:#26304a;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700}
   .pix.future{background:transparent;border:1.5px dashed #2b3752;cursor:default}
   .pix.today{outline:2px solid var(--ink);outline-offset:1.5px}
   .ms-chip{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;padding:6px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin:0 6px 6px 0;background:var(--bg2)}
@@ -1137,19 +1139,28 @@ function renderPixelCal(){
   const box=$("#pixelCal");if(!box)return;box.innerHTML="";box.className="pixgrid";
   const start=DB.settings.startDate;
   for(let i=0;i<42;i++){
-    const d=addDays(start,i);const cell=el("div","pix");
-    if(d>CUR)cell.classList.add("future");
+    const d=addDays(start,i);const dt=parseISO(d);const dom=dt.getDate();
+    const cell=el("div","pixcell");
+    const lab=el("div","pixdate",(dom===1||i===0)?dt.toLocaleDateString(undefined,{month:"short"})+" "+dom:String(dom));
+    const pix=el("div","pix");
+    if(d>CUR)pix.classList.add("future");
     else{
       const sc=dayScore(d);
-      if(sc!=null)cell.style.background=sc>=70?"var(--good)":sc>=45?"var(--warn)":"#7a5b6e";
-      else if(anyDataOn(d))cell.style.background="#3a4a6e";
-      if(d===CUR)cell.classList.add("today");
+      if(sc!=null){
+        pix.style.background=sc>=70?"var(--good)":sc>=45?"var(--warn)":"#7a5b6e";
+        pix.style.color=sc>=70?"#04342c":sc>=45?"#412402":"#ffe2ee";
+        pix.textContent=sc;
+      }
+      else if(anyDataOn(d)){pix.style.background="#3a4a6e";pix.style.color="#aab3c7";pix.textContent="–";}
+      if(d===CUR)pix.classList.add("today");
+      cell.style.cursor="pointer";
       cell.onclick=()=>{
         $$("#dashToggle button").forEach(x=>x.classList.toggle("on",x.dataset.m==="history"));
         $("#overviewWrap").style.display="none";$("#historyWrap").style.display="";
         histMode="day";histDay=d;histDetailDate=null;renderHistory();window.scrollTo(0,0);
       };
     }
+    cell.appendChild(lab);cell.appendChild(pix);
     box.appendChild(cell);
   }
   const ms=$("#milestoneRow");if(!ms)return;ms.innerHTML="";
@@ -1825,36 +1836,84 @@ function computeBriefing(){
 }
 /* contextual quote engine — tags: heldline, postslip, milestone, red, risk, morning, afternoon, evening, night, generic */
 const QUOTES=[
- {t:"My character is built by how I act while I'm hurting.",g:["wk3","risk","heldline","postslip","generic"]},
- {t:"Uncertainty is uncomfortable, not dangerous.",g:["wk3","risk","red","generic"]},
- {t:"Feel everything. Chase nothing.",g:["wk3","risk","weekend","generic"]},
- {t:"I don't need answers to keep moving.",g:["wk3","risk","postslip","generic"]},
- {t:"I am becoming someone pain cannot control.",g:["wk3","milestone","heldline","generic"]},
- {t:"I refuse to let one chapter define my life.",g:["wk3","postslip","generic"]},
- {t:"My future is bigger than my current pain.",g:["wk3","red","generic"]},
- {t:"I will become someone this pain was worth creating.",g:["wk3","milestone","generic"]},
- {t:"Peace is built, not found.",g:["wk3","generic"]},
- {t:"The strongest move today is self-control.",g:["wk3","risk"]},
- {t:"My peace is no longer dependent on another person.",g:["wk3","milestone","generic"]},
- {t:"I don't have to solve today to survive today.",g:["wk3","red","risk"]},
- {t:"My mind wants certainty. My job is to stay steady.",g:["wk3","risk"]},
- {t:"Not knowing is no longer an emergency.",g:["wk3","risk","red"]},
- {t:"I choose progress over certainty.",g:["wk3","generic"]},
- {t:"Every urge I don't act on is a victory.",g:["wk3","heldline","risk"]},
- {t:"My emotions are real. My actions are my choice.",g:["wk3","risk","postslip"]},
- {t:"Discipline is remembering who I want to become.",g:["wk3","risk"]},
- {t:"Temporary emotion. Permanent character.",g:["wk3","risk"]},
- {t:"I don't negotiate with emotional impulses.",g:["wk3","risk","weekend"]},
- {t:"Love doesn't require chasing.",g:["wk3","risk","weekend"]},
- {t:"The right people don't require convincing.",g:["wk3","generic"]},
- {t:"If it's meant for me, I won't have to abandon myself to keep it.",g:["wk3","generic"]},
- {t:"Closure begins when I stop demanding it from someone else.",g:["wk3","postslip","generic"]},
- {t:"I release what I cannot control.",g:["wk3","weekend","generic"]},
- {t:"One hard day is not a broken life.",g:["wk3","postslip","red"]},
- {t:"Recovery is measured in trends, not moments.",g:["wk3","postslip","milestone"]},
- {t:"Today's goal is simple: leave stronger than I woke up.",g:["wk3","generic"]},
- {t:"Small wins compound into a new life.",g:["wk3","milestone"]},
- {t:"Consistency will accomplish what emotion never could.",g:["wk3","generic"]},
+ {t:"I am becoming someone pain cannot control.",g:["wk3","morning","milestone","heldline","generic"]},
+ {t:"My character is built by how I act while I'm hurting.",g:["wk3","morning","afternoon","risk","heldline","postslip","generic"]},
+ {t:"I refuse to let one chapter define my life.",g:["wk3","evening","postslip","generic"]},
+ {t:"My future is bigger than my current pain.",g:["wk3","evening","red","generic"]},
+ {t:"I will become someone this pain was worth creating.",g:["wk3","night","milestone","generic"]},
+ {t:"Feel everything. Chase nothing.",g:["wk3","evening","night","risk","generic"]},
+ {t:"Peace is built, not found.",g:["wk3","morning","generic"]},
+ {t:"The strongest move today is self-control.",g:["wk3","morning","risk"]},
+ {t:"I don't need answers to keep moving.",g:["wk3","morning","afternoon","risk","postslip","generic"]},
+ {t:"My peace is no longer dependent on another person.",g:["wk3","evening","milestone","generic"]},
+ {t:"Uncertainty is uncomfortable, not dangerous.",g:["wk3","afternoon","risk","red","generic"]},
+ {t:"I don't have to solve today to survive today.",g:["wk3","morning","red","risk"]},
+ {t:"My mind wants certainty. My job is to stay steady.",g:["wk3","afternoon","risk"]},
+ {t:"Not knowing is no longer an emergency.",g:["wk3","afternoon","risk","red"]},
+ {t:"I choose progress over certainty.",g:["wk3","morning","generic"]},
+ {t:"Every urge I don't act on is a victory.",g:["wk3","afternoon","heldline","risk"]},
+ {t:"My emotions are real. My actions are my choice.",g:["wk3","afternoon","risk","postslip"]},
+ {t:"Discipline is remembering who I want to become.",g:["wk3","morning","risk"]},
+ {t:"Temporary emotion. Permanent character.",g:["wk3","evening","risk"]},
+ {t:"I don't negotiate with emotional impulses.",g:["wk3","night","risk","weekend"]},
+ {t:"Love doesn't require chasing.",g:["wk3","night","risk","weekend"]},
+ {t:"The right people don't require convincing.",g:["wk3","evening","generic"]},
+ {t:"If it's meant for me, I won't have to abandon myself to keep it.",g:["wk3","night","generic"]},
+ {t:"Closure begins when I stop demanding it from someone else.",g:["wk3","night","postslip","generic"]},
+ {t:"I release what I cannot control.",g:["wk3","night","weekend","generic"]},
+ {t:"One hard day is not a broken life.",g:["wk3","evening","postslip","red"]},
+ {t:"Recovery is measured in trends, not moments.",g:["wk3","evening","postslip","milestone"]},
+ {t:"Today's goal is simple: leave stronger than I woke up.",g:["wk3","morning"]},
+ {t:"Small wins compound into a new life.",g:["wk3","evening","milestone"]},
+ {t:"Consistency will accomplish what emotion never could.",g:["wk3","morning","generic"]},
+ {t:"I can carry uncertainty without letting it carry me.",g:["wk3","afternoon","evening","risk","red","generic"]},
+ {t:"Not every question deserves an immediate answer.",g:["wk3","afternoon","risk"]},
+ {t:"The future will reveal itself without my forcing it.",g:["wk3","night","generic"]},
+ {t:"Peace begins where certainty ends.",g:["wk3","evening","risk"]},
+ {t:"I don't need to know what's next to take the next step.",g:["wk3","morning","risk","generic"]},
+ {t:"Some chapters are meant to be lived, not solved.",g:["wk3","night","generic"]},
+ {t:"Every moment of restraint strengthens the man I'm becoming.",g:["wk3","evening","night","heldline","risk","generic"]},
+ {t:"Calm is my advantage.",g:["wk3","morning","afternoon","risk","red","generic"]},
+ {t:"I don't chase. I choose.",g:["wk3","night","risk","weekend"]},
+ {t:"Today's discipline becomes tomorrow's confidence.",g:["wk3","morning","generic"]},
+ {t:"My emotions deserve respect, not obedience.",g:["wk3","afternoon","risk","postslip"]},
+ {t:"I lead my emotions—they don't lead me.",g:["wk3","afternoon","risk"]},
+ {t:"Healing isn't forgetting. It's hurting less each time.",g:["wk3","evening","postslip","generic"]},
+ {t:"I'm allowed to miss someone without needing them back.",g:["wk3","evening","risk","generic"]},
+ {t:"My heart can ache while my life still moves forward.",g:["wk3","evening","generic"]},
+ {t:"Pain is part of my story, not my identity.",g:["wk3","evening","red","generic"]},
+ {t:"I'm rebuilding, even on the days I don't feel it.",g:["wk3","morning","red","postslip"]},
+ {t:"The life I'm creating is worth the discomfort of today.",g:["wk3","morning","generic"]},
+ {t:"I was whole before this. I'll be whole after it.",g:["wk3","morning","evening","postslip","red","generic"]},
+ {t:"No one else's decision determines my value.",g:["wk3","afternoon","risk","generic"]},
+ {t:"I don't need to prove my worth to anyone.",g:["wk3","afternoon","generic"]},
+ {t:"I trust the man I'm becoming.",g:["wk3","morning","milestone","generic"]},
+ {t:"The right people recognize my value without persuasion.",g:["wk3","evening","night","risk","generic"]},
+ {t:"I never have to beg for what is meant for me.",g:["wk3","night","risk","weekend"]},
+ {t:"Love given freely never needs to be chased.",g:["wk3","night","weekend","generic"]},
+ {t:"I release what I cannot control and invest in what I can.",g:["wk3","morning","generic"]},
+ {t:"The past has a voice, not a vote.",g:["wk3","night","postslip","generic"]},
+ {t:"I stop carrying what no longer carries me.",g:["wk3","evening","generic"]},
+ {t:"Closure is something I build, not something I'm given.",g:["wk3","night","postslip","generic"]},
+ {t:"Every day I let go, I make room for what's next.",g:["wk3","morning","milestone","generic"]},
+ {t:"Be the man others find steady in chaos.",g:["wk3","afternoon","risk"]},
+ {t:"My response is my reputation.",g:["wk3","afternoon","risk"]},
+ {t:"Pressure reveals character.",g:["wk3","afternoon","risk","red"]},
+ {t:"Lead yourself first.",g:["wk3","morning","generic"]},
+ {t:"Strong leaders stay calm when emotions run high.",g:["wk3","afternoon","risk"]},
+ {t:"Today's decisions become tomorrow's legacy.",g:["wk3","morning","night","generic"]},
+ {t:"Control the controllable. Accept the rest.",g:["wk3","morning","afternoon","risk","red","generic"]},
+ {t:"Facts over fear.",g:["wk3","morning","risk","red"]},
+ {t:"Respond with reason, not reaction.",g:["wk3","afternoon","risk"]},
+ {t:"The obstacle is the training.",g:["wk3","morning","red","generic"]},
+ {t:"Nothing outside me owns my peace unless I surrender it.",g:["wk3","night","risk","generic"]},
+ {t:"Strength is quiet.",g:["wk3","evening","generic"]},
+ {t:"One year from now, I'll thank myself for today's restraint.",g:["wk3","night","heldline","generic"]},
+ {t:"Every disciplined day is a vote for my future.",g:["wk3","morning","milestone","generic"]},
+ {t:"I'm building a life that doesn't depend on one person.",g:["wk3","evening","milestone","generic"]},
+ {t:"The future I'm working toward deserves today's sacrifice.",g:["wk3","morning","night","risk","generic"]},
+ {t:"This season is preparing me for something greater.",g:["wk3","evening","red","generic"]},
+ {t:"Keep becoming the man your future family deserves.",g:["wk3","night","weekend","generic"]},
  {t:"An hour ago you felt the pull and didn't move. That's not nothing — that's the whole program.",g:["heldline"]},
  {t:"You just proved the urge wrong. It said you had to act. You didn't.",g:["heldline"]},
  {t:"That wave came for you and you're still standing here. Log it, then go live your day.",g:["heldline"]},
@@ -2030,12 +2089,15 @@ function pickQuote(){
   if(weekend)order.push("weekend");
   order.push(slot,"generic");
   const PACK_ONLY="wk3"; // week of Jul 20 — only the week-3 pack; set to null for the full bank
-  const bank=PACK_ONLY?QUOTES.filter(q=>q.g.indexOf(PACK_ONLY)>=0):QUOTES;
-  const B=bank.length?bank:QUOTES;
+  let bank=PACK_ONLY?QUOTES.filter(q=>q.g.indexOf(PACK_ONLY)>=0):QUOTES;
+  if(!bank.length)bank=QUOTES;
+  if(!weekend)bank=bank.filter(q=>q.g.indexOf("weekend")<0); // weekend lines wait for the weekend
+  const sb=bank.filter(q=>q.g.indexOf(slot)>=0); // time of day leads
+  const B=sb.length?sb:bank;
   const pool=[];
-  for(const tag of order){B.forEach(q=>{if(q.g.indexOf(tag)>=0&&pool.indexOf(q)<0)pool.push(q);});if(pool.length>=10)break;}
+  for(const tag of order){B.forEach(q=>{if(q.g.indexOf(tag)>=0&&pool.indexOf(q)<0)pool.push(q);});if(pool.length>=14)break;}
   const list=pool.length?pool:B;
-  const seed=(daysBetween(DB.settings.startDate,CUR)+1)*31+h; // rotates every hour
+  const seed=(daysBetween(DB.settings.startDate,CUR)+1)*48+h*2+(new Date().getMinutes()>=30?1:0); // rotates every 30 minutes
   return list[seed%list.length];
 }
 function pickWin(){
