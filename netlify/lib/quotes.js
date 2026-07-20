@@ -3,36 +3,36 @@
 // Tags: heldline, postslip, milestone, red, risk, weekend, morning, afternoon, evening, night, generic
 const QUOTES = [
   // ——— week-3 pack (Jul 20) — his words: realistic, action-focused, no false reassurance ———
-  { t: "My character is built by how I act while I'm hurting.", g: ["risk", "heldline", "postslip", "generic"] },
-  { t: "Uncertainty is uncomfortable, not dangerous.", g: ["risk", "red", "afternoon", "generic"] },
-  { t: "Feel everything. Chase nothing.", g: ["risk", "weekend", "evening", "generic"] },
-  { t: "I don't need answers to keep moving.", g: ["risk", "morning", "postslip", "generic"] },
-  { t: "I am becoming someone pain cannot control.", g: ["milestone", "morning", "heldline", "generic"] },
-  { t: "I refuse to let one chapter define my life.", g: ["postslip", "generic"] },
-  { t: "My future is bigger than my current pain.", g: ["red", "generic"] },
-  { t: "I will become someone this pain was worth creating.", g: ["milestone", "generic"] },
-  { t: "Peace is built, not found.", g: ["generic", "morning"] },
-  { t: "The strongest move today is self-control.", g: ["risk", "morning"] },
-  { t: "My peace is no longer dependent on another person.", g: ["milestone", "generic"] },
-  { t: "I don't have to solve today to survive today.", g: ["red", "risk"] },
-  { t: "My mind wants certainty. My job is to stay steady.", g: ["risk", "afternoon"] },
-  { t: "Not knowing is no longer an emergency.", g: ["risk", "red"] },
-  { t: "I choose progress over certainty.", g: ["generic", "morning"] },
-  { t: "Every urge I don't act on is a victory.", g: ["heldline", "risk"] },
-  { t: "My emotions are real. My actions are my choice.", g: ["risk", "postslip"] },
-  { t: "Discipline is remembering who I want to become.", g: ["risk", "morning"] },
-  { t: "Temporary emotion. Permanent character.", g: ["risk", "evening"] },
-  { t: "I don't negotiate with emotional impulses.", g: ["risk", "weekend", "night"] },
-  { t: "Love doesn't require chasing.", g: ["risk", "weekend"] },
-  { t: "The right people don't require convincing.", g: ["generic", "evening"] },
-  { t: "If it's meant for me, I won't have to abandon myself to keep it.", g: ["generic", "night"] },
-  { t: "Closure begins when I stop demanding it from someone else.", g: ["postslip", "generic"] },
-  { t: "I release what I cannot control.", g: ["night", "weekend", "generic"] },
-  { t: "One hard day is not a broken life.", g: ["postslip", "red"] },
-  { t: "Recovery is measured in trends, not moments.", g: ["postslip", "milestone"] },
-  { t: "Today's goal is simple: leave stronger than I woke up.", g: ["morning"] },
-  { t: "Small wins compound into a new life.", g: ["milestone"] },
-  { t: "Consistency will accomplish what emotion never could.", g: ["morning", "generic"] },
+  { t: "My character is built by how I act while I'm hurting.", g: ["wk3", "risk", "heldline", "postslip", "generic"] },
+  { t: "Uncertainty is uncomfortable, not dangerous.", g: ["wk3", "risk", "red", "afternoon", "generic"] },
+  { t: "Feel everything. Chase nothing.", g: ["wk3", "risk", "weekend", "evening", "generic"] },
+  { t: "I don't need answers to keep moving.", g: ["wk3", "risk", "morning", "postslip", "generic"] },
+  { t: "I am becoming someone pain cannot control.", g: ["wk3", "milestone", "morning", "heldline", "generic"] },
+  { t: "I refuse to let one chapter define my life.", g: ["wk3", "postslip", "generic"] },
+  { t: "My future is bigger than my current pain.", g: ["wk3", "red", "generic"] },
+  { t: "I will become someone this pain was worth creating.", g: ["wk3", "milestone", "generic"] },
+  { t: "Peace is built, not found.", g: ["wk3", "generic", "morning"] },
+  { t: "The strongest move today is self-control.", g: ["wk3", "risk", "morning"] },
+  { t: "My peace is no longer dependent on another person.", g: ["wk3", "milestone", "generic"] },
+  { t: "I don't have to solve today to survive today.", g: ["wk3", "red", "risk"] },
+  { t: "My mind wants certainty. My job is to stay steady.", g: ["wk3", "risk", "afternoon"] },
+  { t: "Not knowing is no longer an emergency.", g: ["wk3", "risk", "red"] },
+  { t: "I choose progress over certainty.", g: ["wk3", "generic", "morning"] },
+  { t: "Every urge I don't act on is a victory.", g: ["wk3", "heldline", "risk"] },
+  { t: "My emotions are real. My actions are my choice.", g: ["wk3", "risk", "postslip"] },
+  { t: "Discipline is remembering who I want to become.", g: ["wk3", "risk", "morning"] },
+  { t: "Temporary emotion. Permanent character.", g: ["wk3", "risk", "evening"] },
+  { t: "I don't negotiate with emotional impulses.", g: ["wk3", "risk", "weekend", "night"] },
+  { t: "Love doesn't require chasing.", g: ["wk3", "risk", "weekend"] },
+  { t: "The right people don't require convincing.", g: ["wk3", "generic", "evening"] },
+  { t: "If it's meant for me, I won't have to abandon myself to keep it.", g: ["wk3", "generic", "night"] },
+  { t: "Closure begins when I stop demanding it from someone else.", g: ["wk3", "postslip", "generic"] },
+  { t: "I release what I cannot control.", g: ["wk3", "night", "weekend", "generic"] },
+  { t: "One hard day is not a broken life.", g: ["wk3", "postslip", "red"] },
+  { t: "Recovery is measured in trends, not moments.", g: ["wk3", "postslip", "milestone"] },
+  { t: "Today's goal is simple: leave stronger than I woke up.", g: ["wk3", "morning"] },
+  { t: "Small wins compound into a new life.", g: ["wk3", "milestone"] },
+  { t: "Consistency will accomplish what emotion never could.", g: ["wk3", "morning", "generic"] },
   // ——— held the line ———
   { t: "An hour ago you felt the pull and didn't move. That's not nothing — that's the whole program.", s: "You felt the pull and didn't move. That's the program.", g: ["heldline"] },
   { t: "You just proved the urge wrong. It said you had to act. You didn't.", s: "The urge said act. You didn't. Proof.", g: ["heldline"] },
@@ -204,6 +204,7 @@ function buildCtx(D, today, hour) {
   return { heldRecent, slip, rec, steady, milestone, risk, weekend, hour };
 }
 
+const PACK_ONLY = "wk3"; // week of Jul 20: Chris wants only the week-3 pack in rotation — set to null to restore the full bank
 function pickQuote(ctx) {
   const h = ctx.hour != null ? ctx.hour : 12;
   const slot = h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night";
@@ -216,12 +217,14 @@ function pickQuote(ctx) {
   if (ctx.weekend) order.push("weekend");
   order.push(slot, "generic");
   // pool the top matching groups so context still leads but the rotation is rich
+  const BANK = PACK_ONLY ? QUOTES.filter(q => q.g.indexOf(PACK_ONLY) >= 0) : QUOTES;
+  const bank = BANK.length ? BANK : QUOTES;
   const pool = [];
   for (const tag of order) {
-    QUOTES.forEach(q => { if (q.g.indexOf(tag) >= 0 && pool.indexOf(q) < 0) pool.push(q); });
+    bank.forEach(q => { if (q.g.indexOf(tag) >= 0 && pool.indexOf(q) < 0) pool.push(q); });
     if (pool.length >= 10) break;
   }
-  const list = pool.length ? pool : QUOTES;
+  const list = pool.length ? pool : bank;
   const seed = parseInt((ctx.seedDate || "20260101").replace(/-/g, ""), 10) + h; // rotates EVERY hour
   const q = list[seed % list.length];
   return { text: q.t, short: q.s || q.t, tag: q.g[0] };
