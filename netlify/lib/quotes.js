@@ -2,37 +2,85 @@
 // t = full text · s = short (lock screen; omitted when t is already short)
 // Tags: heldline, postslip, milestone, red, risk, weekend, morning, afternoon, evening, night, generic
 const QUOTES = [
-  // ——— week-3 pack (Jul 20) — his words: realistic, action-focused, no false reassurance ———
-  { t: "My character is built by how I act while I'm hurting.", g: ["wk3", "risk", "heldline", "postslip", "generic"] },
-  { t: "Uncertainty is uncomfortable, not dangerous.", g: ["wk3", "risk", "red", "afternoon", "generic"] },
-  { t: "Feel everything. Chase nothing.", g: ["wk3", "risk", "weekend", "evening", "generic"] },
-  { t: "I don't need answers to keep moving.", g: ["wk3", "risk", "morning", "postslip", "generic"] },
-  { t: "I am becoming someone pain cannot control.", g: ["wk3", "milestone", "morning", "heldline", "generic"] },
-  { t: "I refuse to let one chapter define my life.", g: ["wk3", "postslip", "generic"] },
-  { t: "My future is bigger than my current pain.", g: ["wk3", "red", "generic"] },
-  { t: "I will become someone this pain was worth creating.", g: ["wk3", "milestone", "generic"] },
-  { t: "Peace is built, not found.", g: ["wk3", "generic", "morning"] },
-  { t: "The strongest move today is self-control.", g: ["wk3", "risk", "morning"] },
-  { t: "My peace is no longer dependent on another person.", g: ["wk3", "milestone", "generic"] },
-  { t: "I don't have to solve today to survive today.", g: ["wk3", "red", "risk"] },
-  { t: "My mind wants certainty. My job is to stay steady.", g: ["wk3", "risk", "afternoon"] },
-  { t: "Not knowing is no longer an emergency.", g: ["wk3", "risk", "red"] },
-  { t: "I choose progress over certainty.", g: ["wk3", "generic", "morning"] },
-  { t: "Every urge I don't act on is a victory.", g: ["wk3", "heldline", "risk"] },
-  { t: "My emotions are real. My actions are my choice.", g: ["wk3", "risk", "postslip"] },
-  { t: "Discipline is remembering who I want to become.", g: ["wk3", "risk", "morning"] },
-  { t: "Temporary emotion. Permanent character.", g: ["wk3", "risk", "evening"] },
-  { t: "I don't negotiate with emotional impulses.", g: ["wk3", "risk", "weekend", "night"] },
-  { t: "Love doesn't require chasing.", g: ["wk3", "risk", "weekend"] },
-  { t: "The right people don't require convincing.", g: ["wk3", "generic", "evening"] },
-  { t: "If it's meant for me, I won't have to abandon myself to keep it.", g: ["wk3", "generic", "night"] },
-  { t: "Closure begins when I stop demanding it from someone else.", g: ["wk3", "postslip", "generic"] },
+  // ——— week-3 pack v2 (Jul 20, 78 quotes) — slot-tagged so time of day leads; weekend lines wait for weekends ———
+  { t: "I am becoming someone pain cannot control.", g: ["wk3", "morning", "milestone", "heldline", "generic"] },
+  { t: "My character is built by how I act while I'm hurting.", g: ["wk3", "morning", "afternoon", "risk", "heldline", "postslip", "generic"] },
+  { t: "I refuse to let one chapter define my life.", g: ["wk3", "evening", "postslip", "generic"] },
+  { t: "My future is bigger than my current pain.", g: ["wk3", "evening", "red", "generic"] },
+  { t: "I will become someone this pain was worth creating.", g: ["wk3", "night", "milestone", "generic"] },
+  { t: "Feel everything. Chase nothing.", g: ["wk3", "evening", "night", "risk", "generic"] },
+  { t: "Peace is built, not found.", g: ["wk3", "morning", "generic"] },
+  { t: "The strongest move today is self-control.", g: ["wk3", "morning", "risk"] },
+  { t: "I don't need answers to keep moving.", g: ["wk3", "morning", "afternoon", "risk", "postslip", "generic"] },
+  { t: "My peace is no longer dependent on another person.", g: ["wk3", "evening", "milestone", "generic"] },
+  { t: "Uncertainty is uncomfortable, not dangerous.", g: ["wk3", "afternoon", "risk", "red", "generic"] },
+  { t: "I don't have to solve today to survive today.", g: ["wk3", "morning", "red", "risk"] },
+  { t: "My mind wants certainty. My job is to stay steady.", g: ["wk3", "afternoon", "risk"] },
+  { t: "Not knowing is no longer an emergency.", g: ["wk3", "afternoon", "risk", "red"] },
+  { t: "I choose progress over certainty.", g: ["wk3", "morning", "generic"] },
+  { t: "Every urge I don't act on is a victory.", g: ["wk3", "afternoon", "heldline", "risk"] },
+  { t: "My emotions are real. My actions are my choice.", g: ["wk3", "afternoon", "risk", "postslip"] },
+  { t: "Discipline is remembering who I want to become.", g: ["wk3", "morning", "risk"] },
+  { t: "Temporary emotion. Permanent character.", g: ["wk3", "evening", "risk"] },
+  { t: "I don't negotiate with emotional impulses.", g: ["wk3", "night", "risk", "weekend"] },
+  { t: "Love doesn't require chasing.", g: ["wk3", "night", "risk", "weekend"] },
+  { t: "The right people don't require convincing.", g: ["wk3", "evening", "generic"] },
+  { t: "If it's meant for me, I won't have to abandon myself to keep it.", g: ["wk3", "night", "generic"] },
+  { t: "Closure begins when I stop demanding it from someone else.", g: ["wk3", "night", "postslip", "generic"] },
   { t: "I release what I cannot control.", g: ["wk3", "night", "weekend", "generic"] },
-  { t: "One hard day is not a broken life.", g: ["wk3", "postslip", "red"] },
-  { t: "Recovery is measured in trends, not moments.", g: ["wk3", "postslip", "milestone"] },
+  { t: "One hard day is not a broken life.", g: ["wk3", "evening", "postslip", "red"] },
+  { t: "Recovery is measured in trends, not moments.", g: ["wk3", "evening", "postslip", "milestone"] },
   { t: "Today's goal is simple: leave stronger than I woke up.", g: ["wk3", "morning"] },
-  { t: "Small wins compound into a new life.", g: ["wk3", "milestone"] },
+  { t: "Small wins compound into a new life.", g: ["wk3", "evening", "milestone"] },
   { t: "Consistency will accomplish what emotion never could.", g: ["wk3", "morning", "generic"] },
+  { t: "I can carry uncertainty without letting it carry me.", g: ["wk3", "afternoon", "evening", "risk", "red", "generic"] },
+  { t: "Not every question deserves an immediate answer.", g: ["wk3", "afternoon", "risk"] },
+  { t: "The future will reveal itself without my forcing it.", g: ["wk3", "night", "generic"] },
+  { t: "Peace begins where certainty ends.", g: ["wk3", "evening", "risk"] },
+  { t: "I don't need to know what's next to take the next step.", g: ["wk3", "morning", "risk", "generic"] },
+  { t: "Some chapters are meant to be lived, not solved.", g: ["wk3", "night", "generic"] },
+  { t: "Every moment of restraint strengthens the man I'm becoming.", g: ["wk3", "evening", "night", "heldline", "risk", "generic"] },
+  { t: "Calm is my advantage.", g: ["wk3", "morning", "afternoon", "risk", "red", "generic"] },
+  { t: "I don't chase. I choose.", g: ["wk3", "night", "risk", "weekend"] },
+  { t: "Today's discipline becomes tomorrow's confidence.", g: ["wk3", "morning", "generic"] },
+  { t: "My emotions deserve respect, not obedience.", g: ["wk3", "afternoon", "risk", "postslip"] },
+  { t: "I lead my emotions—they don't lead me.", g: ["wk3", "afternoon", "risk"] },
+  { t: "Healing isn't forgetting. It's hurting less each time.", g: ["wk3", "evening", "postslip", "generic"] },
+  { t: "I'm allowed to miss someone without needing them back.", g: ["wk3", "evening", "risk", "generic"] },
+  { t: "My heart can ache while my life still moves forward.", g: ["wk3", "evening", "generic"] },
+  { t: "Pain is part of my story, not my identity.", g: ["wk3", "evening", "red", "generic"] },
+  { t: "I'm rebuilding, even on the days I don't feel it.", g: ["wk3", "morning", "red", "postslip"] },
+  { t: "The life I'm creating is worth the discomfort of today.", g: ["wk3", "morning", "generic"] },
+  { t: "I was whole before this. I'll be whole after it.", g: ["wk3", "morning", "evening", "postslip", "red", "generic"] },
+  { t: "No one else's decision determines my value.", g: ["wk3", "afternoon", "risk", "generic"] },
+  { t: "I don't need to prove my worth to anyone.", g: ["wk3", "afternoon", "generic"] },
+  { t: "I trust the man I'm becoming.", g: ["wk3", "morning", "milestone", "generic"] },
+  { t: "The right people recognize my value without persuasion.", g: ["wk3", "evening", "night", "risk", "generic"] },
+  { t: "I never have to beg for what is meant for me.", g: ["wk3", "night", "risk", "weekend"] },
+  { t: "Love given freely never needs to be chased.", g: ["wk3", "night", "weekend", "generic"] },
+  { t: "I release what I cannot control and invest in what I can.", g: ["wk3", "morning", "generic"] },
+  { t: "The past has a voice, not a vote.", g: ["wk3", "night", "postslip", "generic"] },
+  { t: "I stop carrying what no longer carries me.", g: ["wk3", "evening", "generic"] },
+  { t: "Closure is something I build, not something I'm given.", g: ["wk3", "night", "postslip", "generic"] },
+  { t: "Every day I let go, I make room for what's next.", g: ["wk3", "morning", "milestone", "generic"] },
+  { t: "Be the man others find steady in chaos.", g: ["wk3", "afternoon", "risk"] },
+  { t: "My response is my reputation.", g: ["wk3", "afternoon", "risk"] },
+  { t: "Pressure reveals character.", g: ["wk3", "afternoon", "risk", "red"] },
+  { t: "Lead yourself first.", g: ["wk3", "morning", "generic"] },
+  { t: "Strong leaders stay calm when emotions run high.", g: ["wk3", "afternoon", "risk"] },
+  { t: "Today's decisions become tomorrow's legacy.", g: ["wk3", "morning", "night", "generic"] },
+  { t: "Control the controllable. Accept the rest.", g: ["wk3", "morning", "afternoon", "risk", "red", "generic"] },
+  { t: "Facts over fear.", g: ["wk3", "morning", "risk", "red"] },
+  { t: "Respond with reason, not reaction.", g: ["wk3", "afternoon", "risk"] },
+  { t: "The obstacle is the training.", g: ["wk3", "morning", "red", "generic"] },
+  { t: "Nothing outside me owns my peace unless I surrender it.", g: ["wk3", "night", "risk", "generic"] },
+  { t: "Strength is quiet.", g: ["wk3", "evening", "generic"] },
+  { t: "One year from now, I'll thank myself for today's restraint.", g: ["wk3", "night", "heldline", "generic"] },
+  { t: "Every disciplined day is a vote for my future.", g: ["wk3", "morning", "milestone", "generic"] },
+  { t: "I'm building a life that doesn't depend on one person.", g: ["wk3", "evening", "milestone", "generic"] },
+  { t: "The future I'm working toward deserves today's sacrifice.", g: ["wk3", "morning", "night", "risk", "generic"] },
+  { t: "This season is preparing me for something greater.", g: ["wk3", "evening", "red", "generic"] },
+  { t: "Keep becoming the man your future family deserves.", g: ["wk3", "night", "weekend", "generic"] },
   // ——— held the line ———
   { t: "An hour ago you felt the pull and didn't move. That's not nothing — that's the whole program.", s: "You felt the pull and didn't move. That's the program.", g: ["heldline"] },
   { t: "You just proved the urge wrong. It said you had to act. You didn't.", s: "The urge said act. You didn't. Proof.", g: ["heldline"] },
@@ -217,15 +265,19 @@ function pickQuote(ctx) {
   if (ctx.weekend) order.push("weekend");
   order.push(slot, "generic");
   // pool the top matching groups so context still leads but the rotation is rich
-  const BANK = PACK_ONLY ? QUOTES.filter(q => q.g.indexOf(PACK_ONLY) >= 0) : QUOTES;
-  const bank = BANK.length ? BANK : QUOTES;
+  let bank = PACK_ONLY ? QUOTES.filter(q => q.g.indexOf(PACK_ONLY) >= 0) : QUOTES;
+  if (!bank.length) bank = QUOTES;
+  if (!ctx.weekend) bank = bank.filter(q => q.g.indexOf("weekend") < 0); // weekend lines wait for the weekend
+  const slotBank = bank.filter(q => q.g.indexOf(slot) >= 0); // time of day leads
+  const B = slotBank.length ? slotBank : bank;
   const pool = [];
   for (const tag of order) {
-    bank.forEach(q => { if (q.g.indexOf(tag) >= 0 && pool.indexOf(q) < 0) pool.push(q); });
-    if (pool.length >= 10) break;
+    B.forEach(q => { if (q.g.indexOf(tag) >= 0 && pool.indexOf(q) < 0) pool.push(q); });
+    if (pool.length >= 14) break;
   }
-  const list = pool.length ? pool : bank;
-  const seed = parseInt((ctx.seedDate || "20260101").replace(/-/g, ""), 10) + h; // rotates EVERY hour
+  const list = pool.length ? pool : B;
+  const half = h * 2 + ((ctx.minute || 0) >= 30 ? 1 : 0);
+  const seed = parseInt((ctx.seedDate || "20260101").replace(/-/g, ""), 10) * 48 + half; // rotates every 30 minutes
   const q = list[seed % list.length];
   return { text: q.t, short: q.s || q.t, tag: q.g[0] };
 }

@@ -14,13 +14,13 @@ exports.handler = async (event) => {
     const tz = qp.tz != null ? +qp.tz : -4;
     const local = new Date(Date.now() + tz * 3600 * 1000);
     const today = local.toISOString().slice(0, 10);
-    const hh = local.getUTCHours();
-    let ctx = { hour: hh, seedDate: today }, steady = null;
+    const hh = local.getUTCHours(), mm = local.getUTCMinutes();
+    let ctx = { hour: hh, minute: mm, seedDate: today }, steady = null;
     const users = await db.collection("users").listDocuments();
     if (users.length) {
       const dataDoc = await db.doc("users/" + users[0].id + "/tracker/data").get();
       if (dataDoc.exists && dataDoc.data().json) {
-        ctx = Object.assign(buildCtx(JSON.parse(dataDoc.data().json), today, hh), { seedDate: today });
+        ctx = Object.assign(buildCtx(JSON.parse(dataDoc.data().json), today, hh), { seedDate: today, minute: mm });
         steady = ctx.steady;
       }
     }

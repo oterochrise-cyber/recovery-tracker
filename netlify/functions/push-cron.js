@@ -51,11 +51,11 @@ exports.handler = async (event) => {
       let sentMap = mDoc.exists ? (mDoc.data().sent || {}) : {};
       if (!isTest && sentMap[today + ":" + slotId]) continue;
 
-      let ctx = { hour: hh, seedDate: today };
+      let ctx = { hour: hh, minute: mm, seedDate: today };
       try {
         const dataDoc = await db.doc("users/" + u.id + "/tracker/data").get();
         if (dataDoc.exists && dataDoc.data().json) {
-          ctx = Object.assign(buildCtx(JSON.parse(dataDoc.data().json), today, hh), { seedDate: today });
+          ctx = Object.assign(buildCtx(JSON.parse(dataDoc.data().json), today, hh), { seedDate: today, minute: mm });
         }
       } catch (e) { log.push("ctx: " + e.message); }
 
