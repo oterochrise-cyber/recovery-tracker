@@ -24,11 +24,14 @@ function successScore(DB, n, date) { // mirror of the client function
   if (evs.length) {
     const sc = avg(evs.map(e => e.self_control != null ? e.self_control : null));
     scPts = sc != null ? (sc / 2) * 10 : 8;
-    const dropped = evs.filter(e => blank(e.anxiety_after) != null && num(e.anxiety_after) < num(e.anxiety)).length;
-    recBonus = evs.length ? (dropped / evs.length) * 10 : 0;
+    const calm = evs.filter(e => e.event_type !== "Panic");
+    const dropped = calm.filter(e => blank(e.anxiety_after) != null && num(e.anxiety_after) < num(e.anxiety)).length;
+    recBonus = calm.length ? (dropped / calm.length) * 10 : 0;
     impulse = evs.filter(e => e.contacted_val && e.contacted_val !== "No" && e.contact_nature === "Impulsive").length;
   } else { scPts = 8; recBonus = 6; }
-  const s = (standPts / 20) * 60 + (scPts / 10) * 30 + (recBonus / 10) * 10 - impulse * 6;
+  const dr = blank(n.day_rating);
+  let s = (standPts / 20) * 45 + (scPts / 10) * 22 + (recBonus / 10) * 8 - impulse * 6;
+  s = dr != null ? s + (+dr / 10) * 25 : s * (100 / 75);
   return Math.max(0, Math.min(100, Math.round(s)));
 }
 
