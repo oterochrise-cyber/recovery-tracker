@@ -954,10 +954,11 @@ function renderDash(){
       heroRing(slp!=null?slp+"h":"—",slp!=null?Math.min(1,slp/9):0,slp!=null?"#3ea6ff":"#3a4356","Sleep")+
       heroRing(scr!=null?String(scr):"—",scr!=null?scr/100:0,scr!=null?"#45e0c0":"#3a4356","Day score");
   }
+  const lvl=v=>v==null?null:(v>=6?"var(--bad)":v>=4?"var(--warn)":"var(--accent)"); // 0–10 sliders; ≥6 mirrors the briefing's risk line
   const cards=[
-    {b:blank(m.m_anxiety)!=null?m.m_anxiety:"—",c:"AM anxiety"},
-    {b:blank(m.m_stress)!=null?m.m_stress:"—",c:"AM stress"},
-    {b:blank(m.m_urge)!=null?m.m_urge:"—",c:"Urge to contact"},
+    {b:blank(m.m_anxiety)!=null?m.m_anxiety:"—",c:"AM anxiety",col:lvl(blank(m.m_anxiety))},
+    {b:blank(m.m_stress)!=null?m.m_stress:"—",c:"AM stress",col:lvl(blank(m.m_stress))},
+    {b:blank(m.m_urge)!=null?m.m_urge:"—",c:"Urge to contact",col:lvl(blank(m.m_urge))},
     (function(){ // self-control as a verdict word + counts, not a bare decimal
       const se=eventsOn(CUR).filter(e=>e.self_control!=null);
       if(!se.length)return {b:"—",c:"Self-control"};
