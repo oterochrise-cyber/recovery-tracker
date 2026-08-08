@@ -1505,6 +1505,10 @@ function mergeDB(a,b){
     const A=byId(a[c]),B=byId(b[c]),m=Object.assign({},B);
     Object.keys(A).forEach(id=>{const av=A[id],bv=B[id];m[id]=(bv&&((bv._u||0)>(av._u||0)))?bv:av;});
     out[c]=Object.values(m).sort((x,y)=>((x.ts||x.id)<(y.ts||y.id)?-1:1));});
+  ["weeklyScore","celebrated"].forEach(k=>out[k]=Object.assign({},b[k]||{},a[k]||{})); // keys merged per entry, local wins — previously dropped entirely, wiping them on every pull
+  out.evaluation=(a.evaluation&&b.evaluation)?(((a.evaluation._u||0)>=(b.evaluation._u||0))?a.evaluation:b.evaluation):(a.evaluation||b.evaluation);
+  out.reasons=(a.reasons&&a.reasons.length?a.reasons:b.reasons)||[];
+  Object.keys(Object.assign({},a,b)).forEach(k=>{if(!(k in out))out[k]=(k in a)?a[k]:b[k];}); // any key this function doesn't manage survives the merge instead of vanishing
   return out;
 }
 async function cloudInit(config){
