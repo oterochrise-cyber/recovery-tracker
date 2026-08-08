@@ -385,7 +385,7 @@
     <div class="seg" id="dashToggle" style="margin-bottom:14px"><button data-m="overview" class="on">Overview</button><button data-m="report">📋 Report</button><button data-m="journey">Journey</button><button data-m="history">History</button><button data-m="reflect">Words</button></div>
     <div id="overviewWrap">
     <div class="card"><h2>Today</h2><div class="ringrow" id="heroRings"></div><div class="grid3" id="todayStats" style="margin-bottom:0"></div></div>
-    <div class="card"><h2>The six weeks</h2><p class="hint">Every square is a day. Tap one to open it.</p><div id="pixelCal"></div>
+    <div class="card"><h2 id="pixTitle">The six weeks</h2><p class="hint">Every square is a day. Tap one to open it.</p><div id="pixelCal"></div>
       <div class="legend" style="margin-top:10px"><span><i style="background:var(--good)"></i>strong</span><span><i style="background:var(--warn)"></i>mixed</span><span><i style="background:#7a5b6e"></i>rough</span><span><i style="background:#3a4a6e"></i>no review yet</span><span><i style="background:transparent;border:1px dashed var(--muted2)"></i>ahead</span></div>
       <div id="milestoneRow" style="margin-top:14px"></div></div>
     <div class="card"><h2>Recent wins</h2><p class="hint">Proof of change, collected automatically.</p><div id="winsFeed"></div></div>
@@ -552,7 +552,7 @@ function parseISO(s){const p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
 function addDays(iso,n){const d=parseISO(iso);d.setDate(d.getDate()+n);return isoOf(d)}
 function daysBetween(a,b){return Math.round((parseISO(b)-parseISO(a))/864e5)}
 function weekIndex(iso){return Math.floor(daysBetween(DB.settings.startDate,iso)/7)+1}
-function phaseFor(w){return w<=2?"Stabilize":w<=4?"Build evidence":"Evaluate"}
+function phaseFor(w){return w<=2?"Stabilize":w<=4?"Build evidence":w<=6?"Evaluate":"Steady"}
 function dow(iso){return parseISO(iso).toLocaleDateString(undefined,{weekday:"narrow"})}
 function nowHM(){const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
 const CUR=todayISO();
@@ -635,7 +635,7 @@ const DAILY_GOALS=[{k:"gym",t:"Gym or intentional movement"},{k:"meals",t:"Three
 /* ============ HEADER / BANNER ============ */
 function renderHeader(){
   const w=Math.max(1,weekIndex(CUR)),dnum=daysBetween(DB.settings.startDate,CUR)+1;
-  $("#hdrSub").textContent="Day "+(dnum>0?dnum:"—")+" · Week "+(w<=6?w:"6+");
+  $("#hdrSub").textContent="Day "+(dnum>0?dnum:"—")+" · Week "+w;
   $("#phasePill").textContent=phaseFor(w);
   $("#morningHeading").textContent="Morning · "+parseISO(CUR).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
   $("#nightHeading").textContent="Nightly review · "+parseISO(CUR).toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
@@ -1138,7 +1138,10 @@ function heroRing(valText,pct,color,label){
 function renderPixelCal(){
   const box=$("#pixelCal");if(!box)return;box.innerHTML="";box.className="pixgrid";
   const start=DB.settings.startDate;
-  for(let i=0;i<42;i++){
+  const total=Math.max(42,Math.ceil((daysBetween(start,CUR)+1)/7)*7); // grid grows a week at a time once the plan window is behind
+  if(total>42&&$("#pixTitle"))$("#pixTitle").textContent="The six weeks — and after";
+  for(let i=0;i<total;i++){
+    if(i===42){const div=el("div");div.style.cssText="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:2px 0";div.innerHTML='<span style="flex:1;height:1px;background:var(--line)"></span><span style="font-size:.58rem;color:#6973a7;letter-spacing:1px;text-transform:uppercase">after day 42</span><span style="flex:1;height:1px;background:var(--line)"></span>';box.appendChild(div);}
     const d=addDays(start,i);const dt=parseISO(d);const dom=dt.getDate();
     const cell=el("div","pixcell");
     const lab=el("div","pixdate",(dom===1||i===0)?dt.toLocaleDateString(undefined,{month:"short"})+" "+dom:String(dom));
@@ -1168,7 +1171,7 @@ function renderPixelCal(){
   const lab=el("div","mini");lab.style.marginBottom="8px";
   lab.innerHTML='<b style="color:var(--accent2);font-size:1.05rem">'+steady+' day'+(steady===1?'':'s')+'</b> holding the line — no impulsive contact';
   ms.appendChild(lab);
-  [3,7,14,21,28,42].forEach(m=>ms.appendChild(el("span","ms-chip"+(steady>=m?" hit":""),(steady>=m?"✓ ":"")+m+"d")));
+  [3,7,14,21,28,42,56,90,180].forEach(m=>ms.appendChild(el("span","ms-chip"+(steady>=m?" hit":""),(steady>=m?"✓ ":"")+m+"d")));
 }
 function renderWins(){
   const box=$("#winsFeed");if(!box)return;
@@ -1190,11 +1193,11 @@ let wkScoreData={};
 function wkTarget(w){return w<=2?10:w<=4?12:14}
 function renderWeeklyScore(){
   const box=$("#wkscoreCats");if(!box)return;
-  const wk=Math.min(6,Math.max(1,weekIndex(CUR)));
+  const wk=Math.max(1,weekIndex(CUR)); // unclamped — week 7+ saves its own key instead of overwriting week 6
   DB.weeklyScore=DB.weeklyScore||{};
   wkScoreData=Object.assign({},DB.weeklyScore[wk]||{});
   $("#wkscoreTitle").textContent="Week "+wk+" scorecard · "+phaseFor(wk);
-  $("#wkscoreHint").textContent="Grade yourself 0–2 per area, once a week. Target this phase: ≥"+wkTarget(wk)+"/16.";
+  $("#wkscoreHint").textContent="Grade yourself 0–2 per area, once a week. "+(wk<=6?"Target this phase: ≥"+wkTarget(wk)+"/16.":"Steady bar: ≥"+wkTarget(wk)+"/16.");
   box.innerHTML="";
   WKSCORE_CATS.forEach(([k,name])=>{
     const div=el("div");div.style.marginBottom="12px";
@@ -1832,9 +1835,9 @@ function computeBriefing(){
   else if(slp!=null&&slp<6.5)play="Short sleep makes everything feel urgent. Nothing is. Caffeine easy, food regular, decisions small.";
   else if(type==="green")play="Green day — bank it. Train, connect with someone, hit a work target. Evidence gets built on days like this.";
   else play="Steady as she goes: hold the standards, use the tools, log honestly.";
-  const w=Math.max(1,Math.min(6,weekIndex(CUR)));
+  const w=Math.max(1,weekIndex(CUR));
   const dayNum=daysBetween(DB.settings.startDate,CUR)+1;
-  const lead=(type==="red"?"High-load day.":type==="amber"?"Careful day.":"Clear day.")+" Day "+dayNum+" of 42 · "+phaseFor(w)+".";
+  const lead=(type==="red"?"High-load day.":type==="amber"?"Careful day.":"Clear day.")+(dayNum<=42?" Day "+dayNum+" of 42 · "+phaseFor(w)+".":" Day "+dayNum+" · Steady.");
   const body=factors.length?lead+" "+factors.slice(0,3).map(f=>f.charAt(0).toUpperCase()+f.slice(1)).join(". ")+".":lead+" Log your morning (or import WHOOP) and this briefing sharpens.";
   return{type,body,play};
 }
@@ -2193,7 +2196,7 @@ function pickQuote(){
   const slip=yEvents.concat(tEvents).some(e=>e.contacted_val&&e.contacted_val!=="No"&&e.contact_nature==="Impulsive");
   const rec=blank(m.recovery_pct);
   const steady=streakOf(STREAKS[2].p);
-  const milestone=[3,7,14,21,28,42].indexOf(steady)>=0;
+  const milestone=[3,7,14,21,28,42,56,90,180].indexOf(steady)>=0;
   const risk=Math.max(0,...yEvents.map(e=>num(e.urge_contact)))>=6;
   const dow=new Date().getDay(),weekend=dow===0||dow===6;
   const h=new Date().getHours();
@@ -2206,7 +2209,8 @@ function pickQuote(){
   if(risk)order.push("risk");
   if(weekend)order.push("weekend");
   order.push(slot,"generic");
-  const PACK_ONLY="wk5"; // week of Aug 3 — Surrender & steadiness pack; set to null for the full bank
+  const _pw=weekIndex(CUR); // weekly packs exist for wks 3–5; any other week rotates the full bank
+  const PACK_ONLY=_pw===3?"wk3":_pw===4?"wk4":_pw===5?"wk5":null;
   let bank=PACK_ONLY?QUOTES.filter(q=>q.g.indexOf(PACK_ONLY)>=0):QUOTES;
   if(!bank.length)bank=QUOTES;
   if(!weekend)bank=bank.filter(q=>q.g.indexOf("weekend")<0); // weekend lines wait for the weekend
@@ -2326,26 +2330,43 @@ const PHASES=[{w:[1,2],name:"Stabilize",desc:"No reconnection attempts. Rebuild 
  {w:[3,4],name:"Build evidence",desc:"Keep real space. Prove calm behavior when nobody is reassuring you. Weekly target ≥12/16.",icon:"🧗"},
  {w:[5,6],name:"Evaluate",desc:"Is the change real and sustained? The six-week evaluation opens at the end of week 6. Weekly target ≥14/16.",icon:"🧭"}];
 function weekDone(w){return CUR>addDays(DB.settings.startDate,w*7-1);}
+function jweekRow(w,curW){
+  const row=el("div","jweek");
+  const sc=DB.weeklyScore&&DB.weeklyScore[w]?WKSCORE_CATS.reduce((s,[k])=>s+(DB.weeklyScore[w][k]||0),0):null;
+  const done=weekDone(w),cur=w===curW&&!done;
+  const node=el("div","jnode"+(done?" done":cur?" cur":""),String(w));
+  const start=addDays(DB.settings.startDate,(w-1)*7);
+  let daysLogged=0;for(let i=0;i<7;i++)if(anyDataOn(addDays(start,i)))daysLogged++;
+  const info=el("div");info.style.flex="1";
+  info.innerHTML='<div style="font-weight:700;font-size:.9rem">Week '+w+(cur?' · <span style="color:var(--accent2)">you are here</span>':'')+'</div>'+
+    '<div class="mini">'+shortD(start)+'–'+shortD(addDays(start,6))+' · '+daysLogged+'/7 days logged'+(sc!=null?' · scorecard <b style="color:'+(sc>=wkTarget(w)?"var(--good)":"var(--warn)")+'">'+sc+'/16</b> (target '+wkTarget(w)+')':(done?' · scorecard not filled yet':''))+'</div>';
+  row.appendChild(node);row.appendChild(info);return row;
+}
 function renderJourney(){
   const wrap=$("#journeyWrap");if(!wrap)return;wrap.innerHTML="";
-  const curW=Math.max(1,Math.min(7,weekIndex(CUR)));
-  PHASES.forEach(ph=>{
-    const card=el("div","card");
-    card.innerHTML='<h2>'+ph.icon+' '+ph.name+' — weeks '+ph.w[0]+'–'+ph.w[1]+'</h2><p class="hint">'+ph.desc+'</p>';
-    ph.w.forEach(w=>{
-      const row=el("div","jweek");
-      const sc=DB.weeklyScore&&DB.weeklyScore[w]?WKSCORE_CATS.reduce((s,[k])=>s+(DB.weeklyScore[w][k]||0),0):null;
-      const done=weekDone(w),cur=w===curW&&!done;
-      const node=el("div","jnode"+(done?" done":cur?" cur":""),String(w));
-      const start=addDays(DB.settings.startDate,(w-1)*7);
-      let daysLogged=0;for(let i=0;i<7;i++)if(anyDataOn(addDays(start,i)))daysLogged++;
-      const info=el("div");info.style.flex="1";
-      info.innerHTML='<div style="font-weight:700;font-size:.9rem">Week '+w+(cur?' · you are here':'')+'</div>'+
-        '<div class="mini">'+shortD(start)+'–'+shortD(addDays(start,6))+' · '+daysLogged+'/7 days logged'+(sc!=null?' · scorecard <b style="color:'+(sc>=wkTarget(w)?"var(--good)":"var(--warn)")+'">'+sc+'/16</b> (target '+wkTarget(w)+')':(done?' · scorecard not filled yet':''))+'</div>';
-      row.appendChild(node);row.appendChild(info);card.appendChild(row);
+  const realW=Math.max(1,weekIndex(CUR));
+  const steadyOn=realW>6&&DB.evaluation&&DB.evaluation.done;
+  if(steadyOn){
+    const s2=el("div","card");
+    s2.innerHTML='<h2>🧭 Steady — since '+shortD(addDays(DB.settings.startDate,42))+'</h2><p class="hint">No finish line, no ladder. Same standards, same log. Weekly bar: 14/16.</p>';
+    const first=Math.max(7,realW-3); // last 4 weeks visible; older fold below
+    for(let w=first;w<=realW;w++)s2.appendChild(jweekRow(w,realW));
+    if(first>7){
+      const acc=el("details","acc");acc.style.margin="10px 0 0";
+      acc.innerHTML='<summary>'+(first-1>7?'Weeks 7–'+(first-1):'Week 7')+'</summary>';
+      const bd=el("div","body");for(let w=7;w<first;w++)bd.appendChild(jweekRow(w,realW));
+      acc.appendChild(bd);s2.appendChild(acc);
+    }
+    wrap.appendChild(s2);
+  } else {
+    const curW=Math.max(1,Math.min(7,realW));
+    PHASES.forEach(ph=>{
+      const card=el("div","card");
+      card.innerHTML='<h2>'+ph.icon+' '+ph.name+' — weeks '+ph.w[0]+'–'+ph.w[1]+'</h2><p class="hint">'+ph.desc+'</p>';
+      ph.w.forEach(w=>card.appendChild(jweekRow(w,curW)));
+      wrap.appendChild(card);
     });
-    wrap.appendChild(card);
-  });
+  }
   const ev=el("div","card");
   const unlocked=(daysBetween(DB.settings.startDate,CUR)+1)>=39;
   if(DB.evaluation&&DB.evaluation.done){
@@ -2358,6 +2379,18 @@ function renderJourney(){
     ev.innerHTML='<h2>🔒 Six-week evaluation</h2><p class="hint">Unlocks '+shortD(addDays(DB.settings.startDate,38))+' — five honest questions, then the reconnection standard.</p>';
   }
   wrap.appendChild(ev);
+  if(steadyOn){
+    const acc=el("details","acc");
+    acc.innerHTML='<summary>Season 1 — '+shortD(DB.settings.startDate)+' → '+shortD(addDays(DB.settings.startDate,41))+' · complete</summary>';
+    const bd=el("div","body");
+    PHASES.forEach(ph=>{
+      const scs=ph.w.map(w=>DB.weeklyScore&&DB.weeklyScore[w]?WKSCORE_CATS.reduce((s,[k])=>s+(DB.weeklyScore[w][k]||0),0)+"/16":"—").join(" · ");
+      const row=el("div","jweek");
+      row.innerHTML='<div class="jnode done" style="width:34px;height:34px">'+ph.icon+'</div><div style="flex:1"><div style="font-weight:700;font-size:.86rem">'+ph.name+' — weeks '+ph.w[0]+'–'+ph.w[1]+'</div><div class="mini">scorecards: '+scs+'</div></div>';
+      bd.appendChild(row);
+    });
+    acc.appendChild(bd);wrap.appendChild(acc);
+  }
 }
 const EVAL_QS=["Am I calmer because I genuinely changed, or only because I still expect her to return?","Can I hear “no” without collapsing, chasing, or becoming angry?","Could I date slowly, without trying to recreate the old relationship immediately?","Can I tolerate uncertainty without interrogating it or repeatedly processing it?","Has she independently shown any desire to reconnect?"];
 function openEvaluation(){
@@ -2373,7 +2406,8 @@ function maybeCelebrate(){
   DB.celebrated=DB.celebrated||{};
   const steady=streakOf(STREAKS[2].p);
   const queue=[];
-  [3,7,14,21,28,42].forEach(md=>{if(steady>=md&&!DB.celebrated["line"+md])queue.push({key:"line"+md,emoji:"🧭",title:md+" days holding the line",sub:"No impulsive contact for "+md+" straight days. That's not luck — that's who you're becoming."});});
+  [3,7,14,21,28,42,56,90,180].forEach(md=>{if(steady>=md&&!DB.celebrated["line"+md])queue.push({key:"line"+md,emoji:"🧭",title:md+" days holding the line",sub:"No impulsive contact for "+md+" straight days. That's not luck — that's who you're becoming."});});
+  if(DB.evaluation&&DB.evaluation.done&&(daysBetween(DB.settings.startDate,CUR)+1)>42&&!DB.celebrated["season1"])queue.push({key:"season1",emoji:"🧭",title:"Season 1 complete",sub:"42 days on the board. The plan is finished. The standards aren't."}); // day gate: eval can be saved as early as day 39
   for(let w=1;w<=6;w++){if(weekDone(w)&&DB.weeklyScore&&DB.weeklyScore[w]&&!DB.celebrated["week"+w]){
     const sc=WKSCORE_CATS.reduce((s,[k])=>s+(DB.weeklyScore[w][k]||0),0);
     queue.push({key:"week"+w,emoji:"🏔",title:"Week "+w+" complete — "+sc+"/16",sub:sc>=wkTarget(w)?"Target hit. "+(w<6?"Week "+(w+1)+" starts now.":"The whole climb is behind you."):"Below target, still standing. The trend is what counts."});}}
@@ -2456,7 +2490,7 @@ function repStat(v,c){return '<div class="stat"><div class="big" style="font-siz
 function renderSessionReport(){
   const wrap=$("#reportWrap");if(!wrap)return;wrap.innerHTML="";
   const seg=el("div","seg");seg.style.marginBottom="14px";
-  [[7,"Last 7 days"],[14,"Last 14 days"],[42,"Whole plan"]].forEach(([n,lab])=>{
+  [[7,"Last 7 days"],[14,"Last 14 days"],[42,"Since day 1"]].forEach(([n,lab])=>{
     const b=el("button",null,lab);b.type="button";if(reportDays===n)b.classList.add("on");
     b.onclick=()=>{reportDays=n;renderSessionReport();};seg.appendChild(b);});
   wrap.appendChild(seg);

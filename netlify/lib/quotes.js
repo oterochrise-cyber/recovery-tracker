@@ -354,21 +354,26 @@ function buildCtx(D, today, hour) {
   const m = (D.morning || {})[today] || {};
   const rec = m.recovery_pct != null && m.recovery_pct !== "" ? +m.recovery_pct : null;
   let steady = 0;
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 200; i++) { // was 60 — capped the widget streak count and killed the 90/180 milestones
     const d = iso(new Date(new Date(today + "T12:00:00Z").getTime() - i * 864e5));
     const hasData = (D.morning || {})[d] || (D.nightly || {})[d] || on(d).length || (D.goals || {})[d];
     if (!hasData) { if (i === 0) continue; else break; }
     if (on(d).some(e => e.contacted_val && e.contacted_val !== "No" && e.contact_nature === "Impulsive")) break;
     steady++;
   }
-  const milestone = [3, 7, 14, 21, 28, 42].indexOf(steady) >= 0;
+  const milestone = [3, 7, 14, 21, 28, 42, 56, 90, 180].indexOf(steady) >= 0;
   const risk = Math.max(0, ...yE.map(e => num(e.urge_contact))) >= 6;
   const dow = new Date(today + "T12:00:00Z").getUTCDay();
   const weekend = dow === 0 || dow === 6;
   return { heldRecent, slip, rec, steady, milestone, risk, weekend, hour };
 }
 
-const PACK_ONLY = "wk5"; // week of Aug 3: "Surrender & steadiness" pack only — set to null to restore the full bank
+const START_DATE = "2026-07-01";
+function packFor(today) { // weekly packs exist for wks 3–5; any other week rotates the full bank
+  if (!today) return null;
+  const w = Math.floor((Date.parse(today + "T12:00:00Z") - Date.parse(START_DATE + "T12:00:00Z")) / 864e5 / 7) + 1;
+  return w === 3 ? "wk3" : w === 4 ? "wk4" : w === 5 ? "wk5" : null;
+}
 function pickQuote(ctx) {
   const h = ctx.hour != null ? ctx.hour : 12;
   const slot = h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night";
@@ -381,6 +386,7 @@ function pickQuote(ctx) {
   if (ctx.weekend) order.push("weekend");
   order.push(slot, "generic");
   // pool the top matching groups so context still leads but the rotation is rich
+  const PACK_ONLY = packFor(ctx.seedDate);
   let bank = PACK_ONLY ? QUOTES.filter(q => q.g.indexOf(PACK_ONLY) >= 0) : QUOTES;
   if (!bank.length) bank = QUOTES;
   if (!ctx.weekend) bank = bank.filter(q => q.g.indexOf("weekend") < 0); // weekend lines wait for the weekend
