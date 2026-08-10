@@ -2,15 +2,29 @@
 // t = full text · s = short (lock screen; omitted when t is already short)
 // Tags: heldline, postslip, milestone, red, risk, weekend, morning, afternoon, evening, night, generic
 const QUOTES = [
+  { t: "Some seasons aren't meant to make sense while you're living them. Trust that God is working in ways you can't yet see.", s: "Seasons don't have to make sense yet. God is working unseen.", g: ["wk6", "morning", "evening", "night", "generic"], w: 2 },
+  { t: "The peace came before the answer.", g: ["wk6", "morning", "afternoon", "evening", "night", "generic"], w: 2 },
+  { t: "Surrender did not close my heart; it released my grip.", g: ["wk6", "morning", "evening", "generic"], w: 2 },
+  { t: "I can keep my heart open without keeping my hands on the outcome.", s: "Heart open. Hands off the outcome.", g: ["wk6", "morning", "afternoon", "evening", "generic"], w: 2 },
+  { t: "I can grieve the moment without judging the whole story.", g: ["wk6", "afternoon", "evening", "generic"] },
+  { t: "A longer timeline is not the same as a lost future.", g: ["wk6", "morning", "evening", "night", "generic"], w: 2 },
+  { t: "The day can hurt without being a bad day.", g: ["wk6", "evening", "night", "generic"] },
+  { t: "Grief and peace can exist in the same body.", g: ["wk6", "evening", "generic"] },
+  { t: "This is a wave, not a verdict.", g: ["wk6", "morning", "red", "risk", "postslip", "generic"] },
+  { t: "My nervous system can be loud without being right.", g: ["wk6", "morning", "afternoon", "red", "risk", "generic"], w: 2 },
+  { t: "A missing reassurance is not negative information.", g: ["wk6", "afternoon", "risk", "heldline", "generic"] },
+  { t: "Peace can return before closeness does.", g: ["wk6", "afternoon", "evening", "generic"], w: 2 },
+  { t: "Repair can begin before it feels warm.", g: ["wk6", "afternoon", "evening", "generic"] },
+  { t: "I said what was mine to say. Now I can let it land.", g: ["wk6", "evening", "night", "heldline", "generic"], w: 2 },
+  { t: "I can miss her without losing myself.", g: ["wk6", "evening", "night", "generic"], w: 2 },
+  { t: "Even while I hurt, I still have something valuable to give.", g: ["wk6", "morning", "afternoon", "generic"], w: 2 },
   // ——— week-5 pack (Aug 3): surrender & steadiness — hope without ownership of the ending ———
-  { t: "The pain came back. I did not go backward.", g: ["wk5", "postslip", "morning", "milestone", "generic"] },
-  { t: "Healing is not feeling less. It is responding differently.", g: ["wk5", "morning", "evening", "milestone", "generic"] },
+  { t: "The pain came back. I did not go backward.", g: ["wk6", "wk5", "postslip", "morning", "milestone", "generic"], w: 2 },
+  { t: "Healing is not feeling less. It is responding differently.", g: ["wk6", "wk5", "morning", "evening", "milestone", "generic"] },
   { t: "I saw her, felt everything, and kept walking.", g: ["wk5", "heldline", "milestone"] },
-  { t: "I am not waiting to feel better before I live better.", g: ["wk5", "morning", "afternoon", "generic"] },
-  { t: "I found a future before I found an answer.", g: ["wk5", "morning", "evening", "generic"] },
+  { t: "I am not waiting to feel better before I live better.", g: ["wk6", "wk5", "morning", "afternoon", "generic"] },
   { t: "I no longer confuse not being alone with being at peace.", g: ["wk5", "evening", "night", "generic"] },
   { t: "Hope can stay. Chasing cannot.", g: ["wk5", "night", "evening", "risk", "generic"] },
-  { t: "The person I become from this matters more than the answer I never got.", s: "Who I become matters more than the answer I never got.", g: ["wk5", "morning", "evening", "generic"] },
   { t: "Don't rush to label a season a failure just because God hasn't revealed its purpose yet.", s: "Don't call it failure before God reveals its purpose.", g: ["wk5", "evening", "red", "generic"] },
   { t: "My uncertainty does not threaten God's certainty.", g: ["wk5", "afternoon", "risk", "red", "generic"] },
   { t: "God's silence is not permission to write the answer for Him.", g: ["wk5", "night", "risk", "generic"] },
@@ -21,19 +35,19 @@ const QUOTES = [
   { t: "I can grieve what I lost without returning to what made me small.", g: ["wk5", "evening", "generic"] },
   { t: "This week proved I can be in pain without becoming powerless.", g: ["wk5", "milestone", "evening"] },
   { t: "Faith is not knowing the ending. It is trusting God without one.", g: ["wk5", "night", "generic"] },
-  { t: "I do not need to know what God is doing to trust that He is working.", s: "I don't need to know what God is doing to trust He's working.", g: ["wk5", "morning", "night", "generic"] },
+  { t: "I do not need to know what God is doing to trust that He is working.", s: "I don't need to know what God is doing to trust He's working.", g: ["wk6", "wk5", "morning", "night", "generic"] },
   { t: "I may not know what comes next, but God is not confused.", g: ["wk5", "afternoon", "red", "risk"] },
-  { t: "I asked God for His will—not His agreement with mine.", g: ["wk5", "morning", "night", "generic"] },
+  { t: "I asked God for His will—not His agreement with mine.", g: ["wk6", "wk5", "morning", "night", "generic"] },
   { t: "I cannot hear God clearly while demanding that He follow my script.", s: "I can't hear God while demanding He follow my script.", g: ["wk5", "night", "generic"] },
   { t: "I asked God for clarity; now I must be willing to hear an answer I did not write.", s: "I asked for clarity. I must accept an answer I didn't write.", g: ["wk5", "evening", "night", "generic"] },
   { t: "I can believe God is working without deciding what His work must produce.", s: "I can trust God is working without deciding what it produces.", g: ["wk5", "evening", "generic"] },
-  { t: "I can want one outcome and still trust God with another.", g: ["wk5", "morning", "evening", "generic"] },
+  { t: "I can want one outcome and still trust God with another.", g: ["wk6", "wk5", "morning", "evening", "generic"] },
   { t: "Trust becomes real when certainty is no longer available.", g: ["wk5", "afternoon", "risk", "red"] },
   { t: "I will not call this season wasted while God is still using it.", g: ["wk5", "morning", "red", "generic"] },
-  { t: "What broke my plan may still be building my purpose.", g: ["wk5", "morning", "generic"] },
+  { t: "What broke my plan may still be building my purpose.", g: ["wk6", "wk5", "morning", "generic"] },
   { t: "I will not judge the chapter before God reveals the fruit.", g: ["wk5", "evening", "generic"] },
   { t: "Sometimes faith gives me the courage to go. Sometimes grace gives me the strength to stay.", s: "Faith gives courage to go. Grace gives strength to stay.", g: ["wk5", "evening", "generic"] },
-  { t: "Staying today does not mean staying forever; it means refusing to let pain make the decision.", s: "Staying today isn't forever. It's not letting pain decide.", g: ["wk5", "morning", "red"] },
+  { t: "Staying today does not mean staying forever; it means refusing to let pain make the decision.", s: "Staying today isn't forever. It's not letting pain decide.", g: ["wk6", "wk5", "morning", "red"] },
   { t: "I can hold hope without turning it into a prophecy.", g: ["wk5", "evening", "night", "risk"] },
   { t: "I do not have to kill hope to stop controlling the outcome.", g: ["wk5", "night", "evening", "generic"] },
   { t: "If the door is meant to open, I will not have to destroy myself standing outside it.", s: "I won't destroy myself standing outside a door.", g: ["wk5", "night", "heldline"] },
@@ -45,18 +59,18 @@ const QUOTES = [
   { t: "Curiosity does not require action.", g: ["wk5", "afternoon", "risk", "heldline"] },
   { t: "A hard moment can revisit me without taking me back.", g: ["wk5", "postslip", "red", "generic"] },
   // ——— week-4 pack (Jul 28): Calm before certainty — catch the story early, soothe before seeking, hope without hold ———
-  { t: "I can calm down before I know.", g: ["wk4","wk5", "morning", "afternoon", "evening", "night", "risk", "red", "heldline", "generic"] },
+  { t: "I can calm down before I know.", g: ["wk6", "wk4","wk5", "morning", "afternoon", "evening", "night", "risk", "red", "heldline", "generic"] },
   { t: "Trust the evidence, not the adrenaline.", g: ["wk4","wk5", "afternoon", "evening", "risk", "red", "generic"] },
   { t: "My body is asking for safety, not information.", g: ["wk4","wk5", "afternoon", "night", "risk", "red", "generic"] },
   { t: "I am becoming the man I need and want to be.", g: ["wk4","wk5", "morning", "evening", "milestone", "generic"] },
-  { t: "I can hold hope without putting my life on hold.", g: ["wk4","wk5", "morning", "evening", "generic"] },
+  { t: "I can hold hope without putting my life on hold.", g: ["wk6", "wk4","wk5", "morning", "evening", "generic"], w: 2 },
   { t: "I do not need every detail to trust God.", g: ["wk4","wk5", "evening", "night", "risk", "generic"] },
-  { t: "Today is mine before it belongs to any memory.", g: ["wk4","wk5", "morning"] },
-  { t: "My first thought does not decide my day.", g: ["wk4","wk5", "morning", "red"] },
-  { t: "Dreams are processing, not prophecy.", g: ["wk4","wk5", "morning", "red"] },
+  { t: "Today is mine before it belongs to any memory.", g: ["wk6", "wk4","wk5", "morning"] },
+  { t: "My first thought does not decide my day.", g: ["wk6", "wk4","wk5", "morning", "red"] },
+  { t: "Dreams are processing, not prophecy.", g: ["wk6", "wk4","wk5", "morning", "red"] },
   { t: "Good sleep still counts when the dreams are hard.", g: ["wk4", "morning"] },
   { t: "Start with God. Stay with today.", g: ["wk4", "morning", "generic"] },
-  { t: "I wake up to build, not investigate.", g: ["wk4","wk5", "morning", "risk"] },
+  { t: "I wake up to build, not investigate.", g: ["wk6", "wk4","wk5", "morning", "risk"] },
   { t: "One day at a time is enough.", g: ["wk4", "morning", "generic"] },
   { t: "No update is an emergency.", g: ["wk4","wk5", "afternoon", "risk"] },
   { t: "I can see what triggers me and stay with myself.", g: ["wk4", "afternoon", "risk"] },
@@ -112,7 +126,6 @@ const QUOTES = [
   { t: "I do not need to feel perfect to perform.", g: ["wk4","wk5", "milestone", "red"] },
   { t: "One good weekend changed what I believed was possible.", g: ["wk4", "milestone", "weekend"] },
   { t: "This is what becoming looks like.", g: ["wk4","wk5", "milestone"] },
-  { t: "It is desire, not ability, that determines whether I hear God's voice.", g: ["wk4","wk5", "morning", "generic"] },
   { t: "My relationship with God is between me and God.", g: ["wk4","wk5", "evening", "generic"] },
   { t: "Don't expect to hear God while keeping my Bible closed.", g: ["wk4", "night", "morning"] },
   { t: "Nothing in life that matters happens in a hurry, so why assume we can hear God's voice in a hurry?", s: "Nothing that matters happens in a hurry.", g: ["wk4","wk5", "evening", "generic"] },
@@ -120,7 +133,7 @@ const QUOTES = [
   { t: "I keep walking. God handles the timing.", g: ["wk4","wk5", "morning", "evening", "generic"] },
   // ——— week-3 pack v2 (Jul 20, 78 quotes) — slot-tagged so time of day leads; weekend lines wait for weekends ———
   { t: "I am becoming someone pain cannot control.", g: ["wk3", "morning", "milestone", "heldline", "generic"] },
-  { t: "My character is built by how I act while I'm hurting.", g: ["wk3", "wk4","wk5", "morning", "afternoon", "risk", "heldline", "postslip", "generic"] },
+  { t: "My character is built by how I act while I'm hurting.", g: ["wk6", "wk3", "wk4","wk5", "morning", "afternoon", "risk", "heldline", "postslip", "generic"] },
   { t: "I refuse to let one chapter define my life.", g: ["wk3", "evening", "postslip", "generic"] },
   { t: "My future is bigger than my current pain.", g: ["wk3", "evening", "red", "generic"] },
   { t: "I will become someone this pain was worth creating.", g: ["wk3", "night", "milestone", "generic"] },
@@ -174,11 +187,10 @@ const QUOTES = [
   { t: "The right people recognize my value without persuasion.", g: ["wk3", "evening", "night", "risk", "generic"] },
   { t: "I never have to beg for what is meant for me.", g: ["wk3", "night", "risk", "weekend"] },
   { t: "Love given freely never needs to be chased.", g: ["wk3", "night", "weekend", "generic"] },
-  { t: "I release what I cannot control and invest in what I can.", g: ["wk3", "morning", "generic"] },
+  { t: "I release what I cannot control and invest in what I can.", g: ["wk6", "wk3", "morning", "generic"] },
   { t: "The past has a voice, not a vote.", g: ["wk3", "wk4", "night", "postslip", "generic"] },
   { t: "I stop carrying what no longer carries me.", g: ["wk3", "evening", "generic"] },
   { t: "Closure is something I build, not something I'm given.", g: ["wk3", "night", "postslip", "generic"] },
-  { t: "Every day I let go, I make room for what's next.", g: ["wk3", "morning", "milestone", "generic"] },
   { t: "Be the man others find steady in chaos.", g: ["wk3", "afternoon", "risk"] },
   { t: "My response is my reputation.", g: ["wk3", "wk4", "afternoon", "risk"] },
   { t: "Pressure reveals character.", g: ["wk3", "afternoon", "risk", "red"] },
@@ -253,7 +265,6 @@ const QUOTES = [
   { t: "Today is another opportunity to become stronger.", g: ["morning"] },
   { t: "Lead with purpose, not emotion.", g: ["morning"] },
   { t: "Protect your peace before anything else.", g: ["morning", "generic"] },
-  { t: "Your future isn't waiting on anyone.", g: ["morning"] },
   { t: "Show up for yourself first.", g: ["morning"] },
   { t: "You survived yesterday. Build today.", g: ["morning"] },
   { t: "One good decision at a time.", g: ["morning", "generic"] },
@@ -261,8 +272,6 @@ const QUOTES = [
   { t: "Walk in with confidence. You belong here.", g: ["morning"] },
   { t: "The goal today is progress, not perfection.", g: ["morning"] },
   { t: "Stand tall. You're building your next chapter.", g: ["morning", "generic"] },
-  { t: "Set the intention. Days with a spine bend less.", g: ["morning"] },
-  { t: "Today's job: be the man the briefing thinks you are.", s: "Be the man the briefing thinks you are.", g: ["morning"] },
   { t: "Walk in calm, brief, professional. Nothing to prove, nothing to fix.", s: "Calm, brief, professional. Nothing to prove.", g: ["morning"] },
   // ——— afternoon / work ———
   { t: "Stay present. Don't let your mind steal today.", g: ["afternoon"] },
@@ -335,7 +344,6 @@ const QUOTES = [
   { t: "Stay present.", g: ["afternoon"] },
   { t: "Keep moving forward.", g: ["generic"] },
   { t: "Breathe. Don't react.", g: ["risk"] },
-  { t: "Your future is waiting.", g: ["morning"] },
   { t: "Respect yourself first.", g: ["generic"] },
   { t: "Don't feed the spiral.", g: ["risk", "night"] },
   { t: "Self-respect over reassurance.", g: ["generic", "night"] }
@@ -372,7 +380,7 @@ const START_DATE = "2026-07-01";
 function packFor(today) { // weekly packs exist for wks 3–5; any other week rotates the full bank
   if (!today) return null;
   const w = Math.floor((Date.parse(today + "T12:00:00Z") - Date.parse(START_DATE + "T12:00:00Z")) / 864e5 / 7) + 1;
-  return w === 3 ? "wk3" : w === 4 ? "wk4" : w === 5 ? "wk5" : null;
+  return w === 3 ? "wk3" : w === 4 ? "wk4" : w === 5 ? "wk5" : (w === 6 || w === 7) ? "wk6" : null;
 }
 function pickQuote(ctx) {
   const h = ctx.hour != null ? ctx.hour : 12;
@@ -402,7 +410,8 @@ function pickQuote(ctx) {
     B.forEach(q => { if (q.g.indexOf(tag) >= 0 && pool.indexOf(q) < 0) pool.push(q); });
     if (pool.length >= 14) break;
   }
-  const list = pool.length ? pool : B;
+  let list = pool.length ? pool : B;
+  list = list.concat(list.filter(q => q.w > 1)); // weighted lines (w:2) appear twice per cycle
   const half = h * 2 + ((ctx.minute || 0) >= 30 ? 1 : 0);
   const seed = parseInt((ctx.seedDate || "20260101").replace(/-/g, ""), 10) * 48 + half; // rotates every 30 minutes
   const q = list[seed % list.length];
