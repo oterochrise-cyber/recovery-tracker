@@ -16,6 +16,7 @@ function init() {
 function compose(slotId, ctx, quote) {
   if (slotId === "morning") return { title: "🧭 Your briefing is ready", body: quote.text, tag: "rt-morning", url: "./index.html" };
   if (slotId === "night") return { title: "🌙 Close the day", body: "Two minutes, honest answers. " + quote.text, tag: "rt-night", url: "./index.html" };
+  if (slotId === "late") return { title: "🌙 Last word tonight", body: quote.text, tag: "rt-late", url: "./index.html" };
   if (slotId === "test") return { title: "🔔 Test — you're wired up", body: quote.text, tag: "rt-test", url: "./index.html" };
   return { title: "🧭 Word for the moment", body: quote.text, tag: "rt-" + slotId, url: "./index.html" };
 }
@@ -40,10 +41,11 @@ exports.handler = async (event) => {
       const today = local.toISOString().slice(0, 10);
       let slotId = null;
       if (isTest) slotId = "test";
-      else if (hh === 8 && mm < 15) slotId = "morning";
-      else if (hh === 14 && mm < 15) slotId = "midday";
-      else if (hh === 18 && mm < 15) slotId = "evening";
+      else if (hh === 7 && mm >= 30 && mm < 45) slotId = "morning";  // moved from 8:00 at his request (Aug 10)
+      else if (hh === 13 && mm < 15) slotId = "midday";               // moved from 14:00 — hour 13 is the worst slip hour in the record
+      else if (hh === 17 && mm < 15) slotId = "evening";               // moved from 18:00 — pre-empts the drive-home window
       else if (hh === 21 && mm >= 30 && mm < 45) slotId = "night";
+      else if (hh === 22 && mm >= 45) slotId = "late";                 // new — 34% of impulsive contacts happen after 22:00
       if (!slotId) continue;
 
       const markerRef = db.doc("users/" + u.id + "/tracker/pushlog");
