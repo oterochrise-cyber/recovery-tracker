@@ -431,7 +431,7 @@ const START_DATE = "2026-07-01";
 function packFor(today) { // weekly packs exist for wks 3–10; any other week rotates the full bank
   if (!today) return null;
   const w = Math.floor((Date.parse(today + "T12:00:00Z") - Date.parse(START_DATE + "T12:00:00Z")) / 864e5 / 7) + 1;
-  return w === 3 ? "wk3" : w === 4 ? "wk4" : w === 5 ? "wk5" : w === 6 ? "wk6" : (w === 7 || w === 8) ? "wk7" : (w === 9 || w === 10) ? "wk9" : null;
+  return w === 3 ? "wk3" : w === 4 ? "wk4" : w === 5 ? "wk5" : w === 6 ? "wk6" : w === 7 ? "wk7" : (w === 8 || w === 9 || w === 10) ? "wk9" : null;
 }
 function pickQuote(ctx) {
   const h = ctx.hour != null ? ctx.hour : 12;

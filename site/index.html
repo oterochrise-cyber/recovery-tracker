@@ -2270,7 +2270,7 @@ function pickQuote(){
   if(weekend)order.push("weekend");
   order.push(slot,"generic");
   const _pw=weekIndex(CUR); // weekly packs exist for wks 3–5; any other week rotates the full bank
-  const PACK_ONLY=_pw===3?"wk3":_pw===4?"wk4":_pw===5?"wk5":_pw===6?"wk6":(_pw===7||_pw===8)?"wk7":(_pw===9||_pw===10)?"wk9":null;
+  const PACK_ONLY=_pw===3?"wk3":_pw===4?"wk4":_pw===5?"wk5":_pw===6?"wk6":_pw===7?"wk7":(_pw===8||_pw===9||_pw===10)?"wk9":null;
   let bank=PACK_ONLY?QUOTES.filter(q=>q.g.indexOf(PACK_ONLY)>=0):QUOTES;
   if(!bank.length)bank=QUOTES;
   if(!weekend)bank=bank.filter(q=>q.g.indexOf("weekend")<0); // weekend lines wait for the weekend
