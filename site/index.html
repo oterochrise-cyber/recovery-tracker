@@ -1139,13 +1139,15 @@ function heroRing(valText,pct,color,label){
 function renderPixelCal(){
   const box=$("#pixelCal");if(!box)return;box.innerHTML="";box.className="pixgrid";
   const start=DB.settings.startDate;
-  const total=Math.max(42,Math.ceil((daysBetween(start,CUR)+1)/7)*7); // grid grows a week at a time once the plan window is behind
-  if(total>42&&$("#pixTitle"))$("#pixTitle").textContent="The six weeks — and after";
-  for(let i=0;i<total;i++){
-    if(i===42){const div=el("div");div.style.cssText="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:2px 0";div.innerHTML='<span style="flex:1;height:1px;background:var(--line)"></span><span style="font-size:.58rem;color:#6973a7;letter-spacing:1px;text-transform:uppercase">after day 42</span><span style="flex:1;height:1px;background:var(--line)"></span>';box.appendChild(div);}
-    const d=addDays(start,i);const dt=parseISO(d);const dom=dt.getDate();
+  if(daysBetween(start,CUR)+1>42&&$("#pixTitle"))$("#pixTitle").textContent="The six weeks — and after";
+  // one section per month, each starting on a fresh row; the current month fills out the row that holds today
+  const cd=parseISO(CUR),dim=new Date(cd.getFullYear(),cd.getMonth()+1,0).getDate();
+  const end=isoOf(new Date(cd.getFullYear(),cd.getMonth(),Math.min(dim,Math.ceil(cd.getDate()/7)*7)));
+  for(let d=start;d<=end;d=addDays(d,1)){
+    const dt=parseISO(d);const dom=dt.getDate();
+    if(dom===1||d===start){const div=el("div");div.style.cssText="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:2px 0";div.innerHTML='<span style="flex:1;height:1px;background:var(--line)"></span><span style="font-size:.58rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase">'+dt.toLocaleDateString(undefined,{month:"long"})+'</span><span style="flex:1;height:1px;background:var(--line)"></span>';box.appendChild(div);}
     const cell=el("div","pixcell");
-    const lab=el("div","pixdate",(dom===1||i===0)?dt.toLocaleDateString(undefined,{month:"short"})+" "+dom:String(dom));
+    const lab=el("div","pixdate",String(dom));
     const pix=el("div","pix");
     if(d>CUR)pix.classList.add("future");
     else{
