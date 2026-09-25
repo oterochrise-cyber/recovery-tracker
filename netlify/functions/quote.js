@@ -2,6 +2,7 @@
 // GET /.netlify/functions/quote?key=QUOTE_KEY
 const admin = require("firebase-admin");
 const { buildCtx, pickQuote } = require("../lib/quotes");
+const { loadTrackerJson } = require("../lib/trackerStore");
 
 exports.handler = async (event) => {
   const qp = (event && event.queryStringParameters) || {};
@@ -18,9 +19,9 @@ exports.handler = async (event) => {
     let ctx = { hour: hh, minute: mm, seedDate: today }, steady = null;
     const users = await db.collection("users").listDocuments();
     if (users.length) {
-      const dataDoc = await db.doc("users/" + users[0].id + "/tracker/data").get();
-      if (dataDoc.exists && dataDoc.data().json) {
-        ctx = Object.assign(buildCtx(JSON.parse(dataDoc.data().json), today, hh), { seedDate: today, minute: mm });
+      const json = await loadTrackerJson(db, users[0].id);
+      if (json) {
+        ctx = Object.assign(buildCtx(JSON.parse(json), today, hh), { seedDate: today, minute: mm });
         steady = ctx.steady;
       }
     }

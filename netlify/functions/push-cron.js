@@ -3,6 +3,7 @@
 const webpush = require("web-push");
 const admin = require("firebase-admin");
 const { buildCtx, pickQuote } = require("../lib/quotes");
+const { loadTrackerJson } = require("../lib/trackerStore");
 
 function init() {
   if (!admin.apps.length) {
@@ -55,9 +56,9 @@ exports.handler = async (event) => {
 
       let ctx = { hour: hh, minute: mm, seedDate: today };
       try {
-        const dataDoc = await db.doc("users/" + u.id + "/tracker/data").get();
-        if (dataDoc.exists && dataDoc.data().json) {
-          ctx = Object.assign(buildCtx(JSON.parse(dataDoc.data().json), today, hh), { seedDate: today, minute: mm });
+        const json = await loadTrackerJson(db, u.id);
+        if (json) {
+          ctx = Object.assign(buildCtx(JSON.parse(json), today, hh), { seedDate: today, minute: mm });
         }
       } catch (e) { log.push("ctx: " + e.message); }
 
