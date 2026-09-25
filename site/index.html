@@ -1828,8 +1828,7 @@ $("#whoopFiles").onchange=async e=>{
   }
   // record in import history (synced like everything else)
   DB.whoopImports=DB.whoopImports||[];
-  DB.whoopImports.push({id:Date.now(),ts:new Date().toISOString(),files:results.map(r=>({name:r.name,note:r.note}))});
-  if(DB.whoopImports.length>30)DB.whoopImports=DB.whoopImports.slice(-30);
+  DB.whoopImports.push({id:Date.now(),ts:new Date().toISOString(),files:results.map(r=>({name:r.name,note:r.note}))}); // full history kept (no cap)
   save();renderAll();renderWhoopHistory();
   showImportModal(results);
   e.target.value="";
