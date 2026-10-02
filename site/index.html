@@ -612,7 +612,8 @@ function renderField(f,obj){
     wrap.appendChild(box);return wrap;}
   if(f.type==="tri"){mk("");const box=el("div","seg tri");const opts=[["yes","Yes"],["part","Partially"],["no","No"]];
     opts.forEach(([cls,lab])=>{const b=el("button",cls,lab);b.type="button";if(obj[f.key]===lab)b.classList.add("on");
-      b.onclick=()=>{box.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");obj[f.key]=lab;};box.appendChild(b);});
+      b.onclick=()=>{const was=b.classList.contains("on");box.querySelectorAll("button").forEach(x=>x.classList.remove("on"));
+        if(was){obj[f.key]="";}else{b.classList.add("on");obj[f.key]=lab;}};box.appendChild(b);}); // tap the chosen answer again to clear it (= unanswered / N/A in the v3 score)
     wrap.appendChild(box);return wrap;}
   if(f.type==="bool"){wrap.className="toggle";wrap.innerHTML='<div class="t-lab">'+esc(f.label)+(f.sub?'<small>'+esc(f.sub)+'</small>':'')+'</div>';
     const s=el("label","switch");const c=el("input");c.type="checkbox";c.checked=!!obj[f.key];c.onchange=()=>obj[f.key]=c.checked;s.appendChild(c);s.appendChild(el("span","sl"));wrap.appendChild(s);return wrap;}
@@ -867,7 +868,12 @@ const NIGHT_SCHEMA=[
   {type:"num",key:"time_val_min",label:"Time around her at work",unit:"minutes"},
   {type:"slider",key:"work_prod",label:"Work productivity"},{type:"slider",key:"focus",label:"Focus"},
   {type:"slider",key:"appetite",label:"Appetite"},{type:"slider",key:"energy",label:"Energy"},
-  {type:"section",label:"Daily standards",small:"Yes / Partially / No"},
+  {type:"section",label:"The loop",small:"what I did about it — not what I felt"},
+  {type:"num",key:"brood_min",label:"Time brooding on her (not problem-solving)",unit:"minutes"},
+  {type:"num",key:"responses_acted",label:"Responses acted on — checks, decoding, asks, posts for her, contact",unit:"count"},
+  {type:"num",key:"urges_resisted",label:"Urges resisted",unit:"count"},
+  {type:"bool",key:"loop_interfered",label:"The loop changed what I did today",sub:"left early, skipped a plan, couldn't work — tracked, not scored"},
+  {type:"section",label:"Daily standards",small:"Yes / Partially / No · tap again to clear (N/A) · hydrated is tracked, not scored"},
   {type:"tri",key:"s_space",label:"I respected space"},{type:"tri",key:"s_anger",label:"I did not act while angry"},
   {type:"tri",key:"s_window",label:"I stayed within my processing window"},{type:"tri",key:"s_ate",label:"I ate enough"},
   {type:"tri",key:"s_hydrate",label:"I hydrated"},{type:"tri",key:"s_trained",label:"I trained or recovered appropriately"},
@@ -916,15 +922,51 @@ function successScore(n,date){
   s=dr!=null?s+(+dr/10)*25:s*(100/75); // no rating yet -> scale the behavior part to 100
   return Math.max(0,Math.min(100,Math.round(s)));
 }
-function updateNightScore(){
-  const s=successScore(nightObj,LOGDATE);
-  $("#nightScore").textContent=s;
-  $("#nightScore").style.color=s>=70?"var(--good)":s>=45?"var(--warn)":"var(--muted)";
-  const hardFelt=num(nightObj.peak_anx)>=7||num(nightObj.peak_sad)>=7||num(nightObj.peak_urge)>=7;
-  $("#nightVerdict").textContent=hardFelt&&s>=65?"Hard day, handled well — this is exactly what progress looks like."
-    :s>=70?"Strong day of self-respecting action.":s>=45?"Solid effort. The trend is what counts, not one day.":"Rough day. It's one data point, not the direction. Reset tomorrow.";
+/* ===== SCORE V3 BEGIN ===== */
+// v3 (Chris's call, Oct 2 2026) — applies from V3_START on; earlier days keep their v2 score untouched.
+// Grades only what he controls: 35 standards (prorated over the ones answered; "hydrated" tracked, not scored)
+// + 20 self-control (avg over the day's events) + 20 the loop (10 time brooding on her + 10 responses acted on)
+// + 25 his own day rating − 8 per impulsive contact − 3 per unsure contact (max −12) − 5 extra per impulsive approach at work.
+// Unanswered = N/A: dropped from the denominator, never guessed, never zero. Needs ≥45 answerable points or returns null.
+// Mirrored exactly in tools/import_local.py (success_score_v3) — change both or neither.
+const V3_START="2026-09-25";
+const STAND_V3=["s_space","s_anger","s_window","s_ate","s_trained","s_work","s_tool","s_self","s_connect"];
+function successScoreV3(n,date){
+  const triVal=v=>v==="Yes"?2:v==="Partially"?1:0;
+  let earned=0,avail=0;
+  const ans=STAND_V3.filter(k=>n[k]==="Yes"||n[k]==="Partially"||n[k]==="No");
+  if(ans.length){earned+=(ans.reduce((s,k)=>s+triVal(n[k]),0)/(2*ans.length))*35;avail+=35;}
+  const evs=eventsOn(date);
+  const sc=avg(evs.map(e=>e.self_control!=null?e.self_control:null));
+  if(sc!=null){earned+=(sc/2)*20;avail+=20;}
+  const m=blank(n.brood_min);
+  if(m!=null){earned+=m<=30?10:m<=60?8:m<=120?6:m<=180?4:m<=300?2:0;avail+=10;}
+  const r=blank(n.responses_acted);
+  if(r!=null){earned+=r<1?10:r<2?7:r<3?4:r<4?2:0;avail+=10;}
+  const d=blank(n.day_rating);
+  if(d!=null){earned+=(d/10)*25;avail+=25;}
+  if(avail<45)return null;
+  let s=earned/avail*100;
+  const contact=evs.filter(e=>e.contacted_val&&e.contacted_val!=="No");
+  const imp=contact.filter(e=>e.contact_nature==="Impulsive");
+  const uns=contact.filter(e=>e.contact_nature==="Unsure").length;
+  const atWork=imp.filter(e=>e.location==="Office").length;
+  s-=imp.length*8+Math.min(uns*3,12)+atWork*5;
+  return Math.max(0,Math.min(100,Math.round(s)));
 }
-$("#saveNight").onclick=()=>{nightObj.success=successScore(nightObj,LOGDATE);nightObj._u=Date.now();DB.nightly[LOGDATE]=nightObj;save();flash("Night saved ✓ · "+shortD(LOGDATE));$("#nightSaved").textContent="Saved just now.";renderDash();renderStreaks();};
+function nightScore(n){return !n?null:n.success_v3!=null?n.success_v3:(n.success!=null?n.success:null);}
+function scoreVer(n){return n&&n.success_v3!=null?"v3":"v2";}
+/* ===== SCORE V3 END ===== */
+function updateNightScore(){
+  const v3=LOGDATE>=V3_START;
+  const s=v3?successScoreV3(nightObj,LOGDATE):successScore(nightObj,LOGDATE);
+  $("#nightScore").textContent=s==null?"—":s;
+  $("#nightScore").style.color=s!=null&&s>=70?"var(--good)":s!=null&&s>=45?"var(--warn)":"var(--muted)";
+  const hardFelt=num(nightObj.peak_anx)>=7||num(nightObj.peak_sad)>=7||num(nightObj.peak_urge)>=7;
+  $("#nightVerdict").textContent=s==null?"Answer a few more lines and tonight scores itself.":(hardFelt&&s>=65?"Hard day, handled well — this is exactly what progress looks like."
+    :s>=70?"Strong day of self-respecting action.":s>=45?"Solid effort. The trend is what counts, not one day.":"Rough day. It's one data point, not the direction. Reset tomorrow.")+(v3?"":" · v2 scale (before Sep 25)");
+}
+$("#saveNight").onclick=()=>{nightObj.success=successScore(nightObj,LOGDATE);if(LOGDATE>=V3_START)nightObj.success_v3=successScoreV3(nightObj,LOGDATE);else delete nightObj.success_v3;nightObj._u=Date.now();DB.nightly[LOGDATE]=nightObj;save();flash("Night saved ✓ · "+shortD(LOGDATE));$("#nightSaved").textContent="Saved just now.";renderDash();renderStreaks();};
 
 /* ============ DASHBOARD ============ */
 function drawBars(barsId,xId,series,opts){opts=opts||{};
@@ -949,7 +991,7 @@ function renderDash(){
   const m=DB.morning[CUR]||{},n=DB.nightly[CUR]||{};
   const hr=$("#heroRings");
   if(hr){
-    const rec=blank(m.recovery_pct),slp=blank(m.hours_slept),scr=n.success!=null?n.success:null;
+    const rec=blank(m.recovery_pct),slp=blank(m.hours_slept),scr=nightScore(n);
     hr.innerHTML=heroRing(rec!=null?rec+"%":"—",rec!=null?rec/100:0,rec!=null?recColor(rec):"#3a4356","Recovery")+
       heroRing(slp!=null?slp+"h":"—",slp!=null?Math.min(1,slp/9):0,slp!=null?"#3ea6ff":"#3a4356","Sleep")+
       heroRing(scr!=null?String(scr):"—",scr!=null?scr/100:0,scr!=null?"#45e0c0":"#3a4356","Day score");
@@ -1290,7 +1332,7 @@ function allDates(){const s=new Set();Object.keys(DB.morning).forEach(d=>s.add(d
 function monthKey(d){return d.slice(0,7);}
 function monthLabel(mk){const p=mk.split("-");return new Date(+p[0],+p[1]-1,1).toLocaleDateString(undefined,{month:"long",year:"numeric"});}
 function mondayOf(iso){const d=parseISO(iso);const wd=(d.getDay()+6)%7;d.setDate(d.getDate()-wd);return isoOf(d);}
-function dayScore(d){return DB.nightly[d]&&DB.nightly[d].success!=null?DB.nightly[d].success:null;}
+function dayScore(d){return nightScore(DB.nightly[d]);} // v3 where it exists (Sep 25 on), v2 before
 function fmtA(v,u){return v==null?"—":(Math.round(v*10)/10)+(u||"");}
 function shortD(iso){return parseISO(iso).toLocaleDateString(undefined,{month:"short",day:"numeric"});}
 function kv(label,val,u){if(val==null||val==="")return "";return '<div class="listrow"><span class="tag">'+esc(label)+'</span><span>'+esc(val)+(u||"")+'</span></div>';}
@@ -1446,8 +1488,9 @@ function renderDayDetail(wrap,d){
   if(g){const done=DAILY_GOALS.filter(x=>g[x.k]).length;const c=el("div","card");c.innerHTML='<h2>Goals ('+done+'/6)</h2>'+DAILY_GOALS.map(x=>'<div class="listrow"><span>'+esc(x.t)+'</span><span>'+(g[x.k]?'<span style="color:var(--good)">✓</span>':'—')+'</span></div>').join("");wrap.appendChild(c);}
   const n=DB.nightly[d];
   if(n){const c=el("div","card");let h='<h2>Nightly review</h2>';
-    if(n.success!=null)h+='<div class="callout" style="text-align:center"><div style="font-size:1.7rem;font-weight:720;color:'+(n.success>=70?"var(--good)":n.success>=45?"var(--warn)":"var(--muted)")+'">'+n.success+'</div><div class="mini">day success score</div></div>';
-    h+=kv("Day rating",n.day_rating)+kv("Happiness",n.happiness)+kv("Calm",n.calm)+kv("Hope",n.hope)+kv("Avg anxiety",n.avg_anx)+kv("Peak anxiety",n.peak_anx)+kv("Peak sadness",n.peak_sad)+kv("Peak anger",n.peak_ang)+kv("Highest urge",n.peak_urge)+kv("Rumination",n.rumination_min," min")+kv("Time around her",n.time_val_min," min")+kv("Work productivity",n.work_prod);
+    const sc_=nightScore(n);
+    if(sc_!=null)h+='<div class="callout" style="text-align:center"><div style="font-size:1.7rem;font-weight:720;color:'+(sc_>=70?"var(--good)":sc_>=45?"var(--warn)":"var(--muted)")+'">'+sc_+'</div><div class="mini">day success score · '+scoreVer(n)+(n.success_v3!=null&&n.success!=null?' · v2 would be '+n.success:'')+'</div></div>';
+    h+=kv("Day rating",n.day_rating)+kv("Happiness",n.happiness)+kv("Calm",n.calm)+kv("Hope",n.hope)+kv("Avg anxiety",n.avg_anx)+kv("Peak anxiety",n.peak_anx)+kv("Peak sadness",n.peak_sad)+kv("Peak anger",n.peak_ang)+kv("Highest urge",n.peak_urge)+kv("Rumination",n.rumination_min," min")+kv("Brooding on her",n.brood_min," min")+kv("Responses acted on",n.responses_acted)+kv("Urges resisted",n.urges_resisted)+(n.loop_interfered?kv("Loop changed the day","yes"):"")+kv("Time around her",n.time_val_min," min")+kv("Work productivity",n.work_prod);
     const st=Object.keys(STAND_LABELS).filter(k=>n[k]).map(k=>'<div class="listrow"><span>'+esc(STAND_LABELS[k])+'</span><span>'+esc(n[k])+'</span></div>').join("");
     if(st)h+='<div class="section-label" style="margin:16px 0 6px">Standards</div>'+st;
     const rf=REFL.filter(([k])=>n[k]).map(([k,l])=>'<div style="margin-top:8px"><div class="tag" style="font-size:.72rem">'+esc(l)+'</div><div style="font-size:.86rem">'+esc(n[k])+'</div></div>').join("");
@@ -1747,9 +1790,9 @@ $("#importBtn").onclick=()=>$("#importFile").click();
 $("#importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.settings&&!d.morning)throw 0;DB=d;DB.settings=DB.settings||{};DB.morning=DB.morning||{};DB.nightly=DB.nightly||{};DB.events=DB.events||[];DB.activities=DB.activities||[];DB.goals=DB.goals||{};DB.journal=DB.journal||{};DB.whoopImports=DB.whoopImports||[];if(!DB.settings.startDate)DB.settings.startDate=todayISO();save();renderAll();flash("Backup imported ✓");}catch(x){flash("Couldn't read that file")}};r.readAsText(f);};
 function csv(rows){return rows.map(r=>r.map(v=>{if(Array.isArray(v))v=v.join("|");if(v==null)v="";v=String(v).replace(/"/g,'""');return /[",\n]/.test(v)?'"'+v+'"':v;}).join(",")).join("\n");}
 $("#csvDaily").onclick=()=>{const mk=Object.keys(MORNING_SCHEMA.filter(f=>f.key).reduce((o,f)=>(o[f.key]=1,o),{}));const nk=NIGHT_SCHEMA.filter(f=>f.key).map(f=>f.key);
-  const cols=["date"].concat(mk.map(k=>"m_"+k),nk.map(k=>"n_"+k),["day_success"]);
+  const cols=["date"].concat(mk.map(k=>"m_"+k),nk.map(k=>"n_"+k),["day_success","day_success_v3"]);
   const dates=Object.keys(DB.morning).concat(Object.keys(DB.nightly)).filter((v,i,s)=>s.indexOf(v)===i).sort();
-  const rows=[cols];dates.forEach(d=>{const m=DB.morning[d]||{},n=DB.nightly[d]||{};rows.push([d].concat(mk.map(k=>m[k]),nk.map(k=>n[k]),[n.success]));});
+  const rows=[cols];dates.forEach(d=>{const m=DB.morning[d]||{},n=DB.nightly[d]||{};rows.push([d].concat(mk.map(k=>m[k]),nk.map(k=>n[k]),[n.success,n.success_v3]));});
   saveFile("daily-"+CUR+".csv",csv(rows),"text/csv");};
 $("#csvEvents").onclick=()=>{const cols=["date","time","event_type","trigger","location","anxiety","panic","anger","urge_contact","urge_impulsive","contacted_val","contact_nature","duration_min","anxiety_after","urge_after","self_control","to_standards","what_happened","thoughts","helped_most","do_differently"];
   const rows=[cols];DB.events.slice().sort((a,b)=>a.ts<b.ts?-1:1).forEach(e=>rows.push(cols.map(c=>c==="time"?new Date(e.ts).toLocaleTimeString():e[c])));
