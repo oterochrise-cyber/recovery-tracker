@@ -930,21 +930,26 @@ function successScore(n,date){
 // Unanswered = N/A: dropped from the denominator, never guessed, never zero. Needs ≥45 answerable points or returns null.
 // Mirrored exactly in tools/import_local.py (success_score_v3) — change both or neither.
 const V3_START="2026-09-25";
+// v3b (Chris's call, Oct 15 2026): same inputs, reweighted from V3B_START on so his own rating carries half the score —
+// 15 standards + 5 self-control + 15 brooding + 15 responses + 50 day rating. Sep 25–28 keep the original 35/20/10/10/25.
+const V3B_START="2026-09-29";
+function v3Weights(date){return date>=V3B_START?{st:15,sc:5,br:15,re:15,dr:50}:{st:35,sc:20,br:10,re:10,dr:25};}
 const STAND_V3=["s_space","s_anger","s_window","s_ate","s_trained","s_work","s_tool","s_self","s_connect"];
 function successScoreV3(n,date){
   const triVal=v=>v==="Yes"?2:v==="Partially"?1:0;
   let earned=0,avail=0;
+  const W=v3Weights(date);
   const ans=STAND_V3.filter(k=>n[k]==="Yes"||n[k]==="Partially"||n[k]==="No");
-  if(ans.length){earned+=(ans.reduce((s,k)=>s+triVal(n[k]),0)/(2*ans.length))*35;avail+=35;}
+  if(ans.length){earned+=(ans.reduce((s,k)=>s+triVal(n[k]),0)/(2*ans.length))*W.st;avail+=W.st;}
   const evs=eventsOn(date);
   const sc=avg(evs.map(e=>e.self_control!=null?e.self_control:null));
-  if(sc!=null){earned+=(sc/2)*20;avail+=20;}
+  if(sc!=null){earned+=(sc/2)*W.sc;avail+=W.sc;}
   const m=blank(n.brood_min);
-  if(m!=null){earned+=m<=30?10:m<=60?8:m<=120?6:m<=180?4:m<=300?2:0;avail+=10;}
+  if(m!=null){earned+=(m<=30?1:m<=60?.8:m<=120?.6:m<=180?.4:m<=300?.2:0)*W.br;avail+=W.br;}
   const r=blank(n.responses_acted);
-  if(r!=null){earned+=r<1?10:r<2?7:r<3?4:r<4?2:0;avail+=10;}
+  if(r!=null){earned+=(r<1?1:r<2?.7:r<3?.4:r<4?.2:0)*W.re;avail+=W.re;}
   const d=blank(n.day_rating);
-  if(d!=null){earned+=(d/10)*25;avail+=25;}
+  if(d!=null){earned+=(d/10)*W.dr;avail+=W.dr;}
   if(avail<45)return null;
   let s=earned/avail*100;
   const contact=evs.filter(e=>e.contacted_val&&e.contacted_val!=="No");
@@ -955,7 +960,7 @@ function successScoreV3(n,date){
   return Math.max(0,Math.min(100,Math.round(s)));
 }
 function nightScore(n){return !n?null:n.success_v3!=null?n.success_v3:(n.success!=null?n.success:null);}
-function scoreVer(n){return n&&n.success_v3!=null?"v3":"v2";}
+function scoreVer(n,date){return n&&n.success_v3!=null?((date||LOGDATE||"")>=V3B_START?"v3b":"v3"):"v2";}
 /* ===== SCORE V3 END ===== */
 function updateNightScore(){
   const v3=LOGDATE>=V3_START;
@@ -1489,7 +1494,7 @@ function renderDayDetail(wrap,d){
   const n=DB.nightly[d];
   if(n){const c=el("div","card");let h='<h2>Nightly review</h2>';
     const sc_=nightScore(n);
-    if(sc_!=null)h+='<div class="callout" style="text-align:center"><div style="font-size:1.7rem;font-weight:720;color:'+(sc_>=70?"var(--good)":sc_>=45?"var(--warn)":"var(--muted)")+'">'+sc_+'</div><div class="mini">day success score · '+scoreVer(n)+(n.success_v3!=null&&n.success!=null?' · v2 would be '+n.success:'')+'</div></div>';
+    if(sc_!=null)h+='<div class="callout" style="text-align:center"><div style="font-size:1.7rem;font-weight:720;color:'+(sc_>=70?"var(--good)":sc_>=45?"var(--warn)":"var(--muted)")+'">'+sc_+'</div><div class="mini">day success score · '+scoreVer(n,d)+(n.success_v3!=null&&n.success!=null?' · v2 would be '+n.success:'')+'</div></div>';
     h+=kv("Day rating",n.day_rating)+kv("Happiness",n.happiness)+kv("Calm",n.calm)+kv("Hope",n.hope)+kv("Avg anxiety",n.avg_anx)+kv("Peak anxiety",n.peak_anx)+kv("Peak sadness",n.peak_sad)+kv("Peak anger",n.peak_ang)+kv("Highest urge",n.peak_urge)+kv("Rumination",n.rumination_min," min")+kv("Brooding on her",n.brood_min," min")+kv("Responses acted on",n.responses_acted)+kv("Urges resisted",n.urges_resisted)+(n.loop_interfered?kv("Loop changed the day","yes"):"")+kv("Time around her",n.time_val_min," min")+kv("Work productivity",n.work_prod);
     const st=Object.keys(STAND_LABELS).filter(k=>n[k]).map(k=>'<div class="listrow"><span>'+esc(STAND_LABELS[k])+'</span><span>'+esc(n[k])+'</span></div>').join("");
     if(st)h+='<div class="section-label" style="margin:16px 0 6px">Standards</div>'+st;
