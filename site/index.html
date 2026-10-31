@@ -1674,7 +1674,7 @@ $("#notifEnable").onclick=async()=>{
   }catch(e){st.textContent="Couldn't enable: "+e.message;logErr("push sub: "+e.message);}
 };
 $("#notifTest").onclick=async()=>{
-  try{const r=await fetch("/.netlify/functions/push-cron?test=1&key="+PUSH_KEY);
+  try{const r=await fetch("/.netlify/functions/push-test?key="+PUSH_KEY);
     const j=await r.json().catch(()=>({}));
     flash(r.ok?("Test sent to "+(j.sent||0)+" device(s) — check your lock screen"):"Test failed — server setup not finished yet");
   }catch(e){flash("Test failed — server setup not finished yet");}
